@@ -1,5 +1,12 @@
 # After release: review, a hotfix, and "use it for months"
 
+> **History, version 2.** This page describes the second version (goal + days per
+> week, a set-by-set logbook). Version 3 replaced that design: the author decided the
+> logbook was a chore and rebuilt the app around picking a body and a guided workout
+> (see [`decisions.md`](./decisions.md)). Features named here that version 3 dropped:
+> the plate calculator, editing a logged session, and log drafts. The hotfix below
+> still applies (`next.config.ts`).
+
 Written after the assignment build was deployed. It records what an independent
 review found, one serious bug found by using the app like a regular user, and what
 was added so the app is worth opening every week.

@@ -70,7 +70,15 @@ flowchart TD
     E --> M["Monthly check-in prompt (only if you've done one before, 28+ days ago)"]
 ```
 
-## Screens and states
+## Screens and states (what the agent proposed, and what was kept)
+
+The agent proposed these screens, states and errors from the flow sentence; the author
+chose what to keep. Kept from the agent: resume a workout in progress, swap when a
+machine is busy, repeat a mostly-unfinished workout, easing back in after a gap, undo
+after delete. Cut by the author: muscle and equipment questions, streaks, a
+set-by-set logbook. The full record of who decided what is in
+[`docs/decisions.md`](./docs/decisions.md).
+
 
 | Screen | Route | States | Errors |
 |---|---|---|---|
