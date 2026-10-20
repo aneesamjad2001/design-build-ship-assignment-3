@@ -1,29 +1,32 @@
 "use client";
 
 /**
- * Browser storage as a small external store. Reads are validated (see
- * storage.ts), writes fall back to memory if the browser blocks storage, and
- * other tabs stay in sync through the `storage` event. Nothing leaves the
- * device.
+ * Browser storage as a small external store. Reads are validated (see data.ts),
+ * writes fall back to memory if the browser blocks storage, and other tabs stay in
+ * sync through the `storage` event. Nothing leaves the device.
+ *
+ * What is stored is never rewritten when the unit changes: every workout, weight
+ * and check-in keeps the unit it was entered in, and is converted for display only.
  */
 
 import { useSyncExternalStore } from "react";
 import { buildBackup } from "./backup";
+import { checkinsIn } from "./checkin";
+import type { Checkin } from "./checkin";
 import { todayString } from "./dates";
-import {
-  EMPTY_DATA,
-  STORAGE_KEY,
-  parseData,
-  serialize,
-  sessionsIn,
-} from "./storage";
-import type { Data, Profile, Session } from "./storage";
+import { EMPTY_DATA, STORAGE_KEY, parseData, serialize, weightsIn, workoutsIn } from "./data";
+import type { Data, Profile } from "./data";
+import { updateBook } from "./adapt";
+import type { CompletedWorkout, Unit } from "./adapt";
+import type { LookId } from "./looks";
+import type { NutritionProfile } from "./nutrition";
+import type { TimeOption } from "./workouts";
 
 export interface Snapshot {
   /** false until the browser has been read (server render and first paint) */
   ready: boolean;
+  /** what the app shows: weights and measurements converted to the profile's unit */
   data: Data;
-  /** something unreadable was dropped on load */
   recovered: boolean;
   /** false when the browser refused to save, so data lives only in this tab */
   persistent: boolean;
@@ -35,7 +38,7 @@ let writeFailed = false;
 let memoryRaw: string | null = null;
 let cacheRaw: string | null | undefined;
 let cache: Snapshot = LOADING;
-/** What is actually stored (weights in the unit each session was entered in). */
+/** what is actually stored */
 let cacheStored: Data = EMPTY_DATA;
 const listeners = new Set<() => void>();
 
@@ -55,8 +58,10 @@ function getSnapshot(): Snapshot {
   cacheRaw = raw;
   const { data, recovered } = parseData(raw);
   cacheStored = data;
-  // The app reads sessions converted to the profile's unit; storage is never rewritten for that.
-  const shown = data.profile ? { ...data, sessions: sessionsIn(data.sessions, data.profile.unit) } : data;
+  const unit = data.profile?.unit;
+  const shown: Data = unit
+    ? { ...data, workouts: workoutsIn(data.workouts, unit), weights: weightsIn(data.weights, unit), checkins: checkinsIn(data.checkins, unit) }
+    : data;
   cache = { ready: true, data: shown, recovered, persistent: !writeFailed };
   return cache;
 }
@@ -89,69 +94,98 @@ function commit(data: Data) {
   emit();
 }
 
-export function useIronlog(): Snapshot {
-  return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
-}
-
-function newId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
 /** The stored data, for writing back. Never the converted view. */
 const current = (): Data => {
   getSnapshot();
   return cacheStored;
 };
 
-export function startProfile(p: Pick<Profile, "goal" | "daysPerWeek">) {
-  const d = current();
-  commit({ ...d, profile: { goal: p.goal, daysPerWeek: p.daysPerWeek, unit: d.profile?.unit ?? "lb", createdAt: d.profile?.createdAt ?? Date.now() } });
+export function useIronlog(): Snapshot {
+  return useSyncExternalStore(subscribe, getSnapshot, () => LOADING);
 }
 
-/** Change goal, days, or unit. Switching unit only changes how weights are shown. */
-export function updateProfile(patch: Partial<Pick<Profile, "goal" | "daysPerWeek" | "unit">>) {
+function newId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** First pick creates the profile; later picks just change the look. */
+export function chooseLook(lookId: LookId) {
+  const d = current();
+  const profile: Profile = d.profile ? { ...d.profile, lookId } : { lookId, time: "standard", unit: "lb", createdAt: Date.now() };
+  commit({ ...d, profile });
+}
+
+export function updateProfile(patch: Partial<Pick<Profile, "time" | "unit">>) {
   const d = current();
   if (!d.profile) return;
   commit({ ...d, profile: { ...d.profile, ...patch } });
 }
 
-export function addSession(s: Omit<Session, "id" | "createdAt" | "unit">): Session {
-  const d = current();
-  const session: Session = { ...s, id: newId(), createdAt: Date.now(), unit: d.profile?.unit ?? "lb" };
-  commit({ ...d, sessions: [...d.sessions, session] });
-  return session;
+export function setTime(time: TimeOption) {
+  updateProfile({ time });
 }
 
-/** Replace a session's contents (date, workout, sets, note). Entered in the current unit. */
-export function updateSession(id: string, patch: Pick<Session, "date" | "focus" | "entries" | "note">) {
+export function setUnit(unit: Unit) {
+  updateProfile({ unit });
+}
+
+/** Save a finished workout and fold its weights and feedback into the memory. */
+export function saveWorkout(w: Omit<CompletedWorkout, "id" | "createdAt" | "unit">): CompletedWorkout {
   const d = current();
   const unit = d.profile?.unit ?? "lb";
-  commit({
-    ...d,
-    sessions: d.sessions.map((s) => {
-      if (s.id !== id) return s;
-      const next: Session = { ...s, date: patch.date, focus: patch.focus, entries: patch.entries, unit };
-      if (patch.note?.trim()) next.note = patch.note.trim();
-      else delete next.note;
-      return next;
-    }),
-  });
+  const workout: CompletedWorkout = { ...w, id: newId(), createdAt: Date.now(), unit };
+  commit({ ...d, workouts: [...d.workouts, workout], weights: updateBook(d.weights, workout) });
+  return workout;
 }
 
-/** Remove a session and hand back exactly what was stored, so it can be restored. */
-export function deleteSession(id: string): Session | null {
+/** Remove a workout and hand back exactly what was stored, so it can be restored. */
+export function deleteWorkout(id: string): CompletedWorkout | null {
   const d = current();
-  const removed = d.sessions.find((s) => s.id === id) ?? null;
-  commit({ ...d, sessions: d.sessions.filter((s) => s.id !== id) });
+  const removed = d.workouts.find((w) => w.id === id) ?? null;
+  commit({ ...d, workouts: d.workouts.filter((w) => w.id !== id) });
   return removed;
 }
 
-export function restoreSession(session: Session) {
+export function restoreWorkout(w: CompletedWorkout) {
   const d = current();
-  if (d.sessions.some((s) => s.id === session.id)) return;
-  commit({ ...d, sessions: [...d.sessions, session] });
+  if (d.workouts.some((x) => x.id === w.id)) return;
+  commit({ ...d, workouts: [...d.workouts, w] });
+}
+
+export function addCheckin(values: Omit<Checkin, "id" | "createdAt" | "unit">): Checkin {
+  const d = current();
+  const c: Checkin = { ...values, id: newId(), createdAt: Date.now(), unit: d.profile?.unit ?? "lb" };
+  commit({ ...d, checkins: [...d.checkins, c] });
+  return c;
+}
+
+export function deleteCheckin(id: string): Checkin | null {
+  const d = current();
+  const removed = d.checkins.find((c) => c.id === id) ?? null;
+  commit({ ...d, checkins: d.checkins.filter((c) => c.id !== id) });
+  return removed;
+}
+
+export function restoreCheckin(c: Checkin) {
+  const d = current();
+  if (d.checkins.some((x) => x.id === c.id)) return;
+  commit({ ...d, checkins: [...d.checkins, c] });
+}
+
+export function saveNutrition(profile: NutritionProfile | null) {
+  const d = current();
+  commit({ ...d, nutrition: profile });
+}
+
+export function resetAll() {
+  memoryRaw = null;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem("ironlog:workout:v2");
+  } catch {
+    writeFailed = true;
+  }
+  emit();
 }
 
 /** The stored data as a downloadable backup (weights in the unit each was entered in). */
@@ -164,22 +198,11 @@ export function restoreFromBackup(data: Data) {
   commit(data);
 }
 
-export function resetAll() {
-  memoryRaw = null;
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    writeFailed = true;
-  }
-  emit();
-}
-
-/* "Today" that stays right when a tab is left open overnight. */
+/* "Today" that stays right when a tab is left open, including past midnight. */
 function subscribeToday(cb: () => void): () => void {
   const onVisible = () => document.visibilityState === "visible" && cb();
   document.addEventListener("visibilitychange", onVisible);
   window.addEventListener("focus", cb);
-  // A tab left open and in front still has to roll over at midnight.
   let timer: ReturnType<typeof setTimeout>;
   const schedule = () => {
     const now = new Date();
@@ -201,11 +224,11 @@ export function useToday(): string {
   return useSyncExternalStore(subscribeToday, () => todayString(), () => "");
 }
 
-/* A one-shot message handed from one screen to the next, e.g. "Session saved". */
+/* A one-shot message handed from one screen to the next, e.g. "Workout saved". */
 export interface Flash {
   title: string;
   detail?: string;
-  /** The page that should show it. */
+  /** the page that should show it */
   path: string;
 }
 

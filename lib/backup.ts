@@ -2,10 +2,10 @@
  *  validation as loading from the browser applies, so a bad or foreign file
  *  can never corrupt what's on the device. */
 
-import { toDateString, shortDate } from "./dates.ts";
-import { goalLabel } from "./plans.ts";
-import { parseData } from "./storage.ts";
-import type { Data } from "./storage.ts";
+import { shortDate, toDateString } from "./dates.ts";
+import { parseData } from "./data.ts";
+import type { Data } from "./data.ts";
+import { getLook } from "./looks.ts";
 
 export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
 
@@ -40,9 +40,9 @@ export function readBackup(text: string): ReadResult {
 
 /** One line for the confirm box: what is in the file. */
 export function describeBackup(data: Data): string {
-  const n = data.sessions.length;
-  const plan = data.profile ? `${goalLabel(data.profile.goal)}, ${data.profile.daysPerWeek} days a week` : "no plan";
-  if (n === 0) return `A plan only (${plan}) with no sessions.`;
-  const dates = data.sessions.map((s) => s.date).sort();
-  return `${n} ${n === 1 ? "session" : "sessions"} from ${shortDate(dates[0])} to ${shortDate(dates[dates.length - 1])} · ${plan}.`;
+  const n = data.workouts.length;
+  const look = data.profile ? (getLook(data.profile.lookId)?.name ?? "a saved plan") : "no plan";
+  if (n === 0) return `A plan only (${look}) with no workouts.`;
+  const dates = data.workouts.map((w) => w.date).sort();
+  return `${n} ${n === 1 ? "workout" : "workouts"} from ${shortDate(dates[0])} to ${shortDate(dates[dates.length - 1])} · ${look}.`;
 }

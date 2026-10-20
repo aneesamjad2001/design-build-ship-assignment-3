@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Today" },
-  { href: "/log", label: "Log" },
   { href: "/progress", label: "Progress" },
   { href: "/plan", label: "Plan" },
 ];
@@ -26,6 +25,8 @@ function Barbell() {
  *  and sit in the header on larger screens. aria-current marks where you are. */
 export function SiteHeader() {
   const pathname = usePathname();
+  // gym mode: while lifting the screen is for lifting — the card has its own Exit
+  const inWorkout = pathname === "/workout";
   return (
     <header className="border-b border-line bg-bg md:sticky md:top-0 md:z-20">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
@@ -33,6 +34,7 @@ export function SiteHeader() {
           <Barbell />
           Ironlog
         </Link>
+        {!inWorkout && (
         <nav
           aria-label="Main"
           className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface md:static md:border-0 md:bg-transparent"
@@ -56,6 +58,7 @@ export function SiteHeader() {
             })}
           </ul>
         </nav>
+        )}
       </div>
       <div className="hazard h-1.5" aria-hidden />
     </header>

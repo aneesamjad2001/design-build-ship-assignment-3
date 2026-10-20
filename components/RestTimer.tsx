@@ -33,7 +33,7 @@ type Phase = { kind: "idle" } | { kind: "running"; endsAt: number; total: number
  * locked phone or a backgrounded tab still shows the right time when you return.
  * When it ends: vibration, a short beep, and a message — never sound alone.
  */
-export function RestTimer() {
+export function RestTimer({ request, className = "bottom-14 md:bottom-0" }: { request?: { seconds: number; id: number } | null; className?: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [now, setNow] = useState(0);
 
@@ -58,10 +58,23 @@ export function RestTimer() {
     setNow(t);
     setPhase({ kind: "running", endsAt: t + seconds * 1000, total: seconds });
   };
+
+  // a new request (e.g. a set was just completed) starts a rest; deferred so no state is set synchronously in the effect
+  const requestId = request?.id;
+  const requestSeconds = request?.seconds;
+  useEffect(() => {
+    if (requestId === undefined || requestSeconds === undefined) return;
+    const t = setTimeout(() => {
+      const n = nowMs();
+      setNow(n);
+      setPhase({ kind: "running", endsAt: n + requestSeconds * 1000, total: requestSeconds });
+    }, 0);
+    return () => clearTimeout(t);
+  }, [requestId, requestSeconds]);
   const remaining = running ? Math.max(0, Math.ceil((running.endsAt - now) / 1000)) : 0;
 
   return (
-    <section aria-label="Rest timer" className="fixed inset-x-0 bottom-14 z-20 md:bottom-0">
+    <section aria-label="Rest timer" className={`fixed inset-x-0 z-20 ${className}`}>
       <div className="mx-auto max-w-2xl px-3 pb-2">
         <div className="relative overflow-hidden border-2 border-line bg-raised p-2 shadow-lg shadow-black/60">
           {phase.kind === "idle" && (
