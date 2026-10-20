@@ -1,145 +1,169 @@
 # Ironlog
 
-**A gym coach that lives in your browser.** Tell it your goal and how many days
-a week you can train; it hands you today's workout, remembers what you lift, and
-every time you come back it tells you what to train next — and why.
+**Never walk into the gym without a plan.** Tell Ironlog the kind of body you're
+aiming for, in plain words. It builds your workouts and, every time you show up,
+tells you exactly what to do: which exercises, how to do each one, and what weight
+to start with. However long it's been since last time.
 
-Built for MPCS 51238 *Design, Build, Ship* — Assignment 3, Patterns & Flows.
+Built for MPCS 51238 *Design, Build, Ship*, Assignment 3: Patterns & Flows.
 Next.js + Tailwind, no database, no accounts, no external APIs. Everything is
 saved in the browser with `localStorage`.
 
 - **Live:** https://design-build-ship-assignment-3.vercel.app
 - **Repository:** https://github.com/aneesamjad2001/design-build-ship-assignment-3
-- **Who it's for:** someone who lifts a few days a week and keeps losing track of
-  what they did last time and what they should do next.
-- **What brings them back:** a workout that is already chosen for them, *with a
-  reason*; a barbell that fills up plate by plate each week; a streak of weeks
-  they hit their target; and "last time → try this" numbers that make the next
-  session obvious.
+- **Who it's for:** someone who goes to the gym *irregularly*, arrives with no plan,
+  and doesn't want to learn muscle jargon or fill in a logbook. (This is the
+  author: the app was rebuilt around that problem after the first release.)
+- **What brings them back:** one useful next visit, however long it's been. The app
+  remembers what you did and the weights you used, picks the next workout, eases you
+  back in after a gap, and never shows a broken streak or "you missed 3 days".
 
 ## The flow
 
-> I pick a goal and my days → I see today's workout right away → I log what I
-> lifted → I come back later, and it remembers me and tells me what to train next.
+> I pick the body I want → I see my first workout right away → I do it, one exercise
+> at a time, ticking off sets → I come back whenever, and it remembers me and tells
+> me what's next.
 
 ```mermaid
 flowchart TD
-    subgraph FIRST["1 · First visit — useful right away"]
-        A([Open Ironlog, nothing saved]) --> B["'What are you training for?'<br/>4 goal tiles + days per week"]
-        B --> C{Picked a goal?}
-        C -- "No: error beside the tiles,<br/>focus moves to them" --> B
-        C -- Yes --> D["Today: your first workout,<br/>sets × reps, and why"]
+    subgraph FIRST["1 · First visit, useful right away"]
+        A([Open Ironlog, nothing saved]) --> B["'What body are you aiming for?'<br/>6 looks, drawn as figures, plain words"]
+        B --> C{Picked a look?}
+        C -- "No: error beside the looks,<br/>focus moves to them" --> B
+        C -- Yes --> D["Today: your first workout,<br/>a light intro, and why"]
     end
-    subgraph TASK["2 · The main task — log a session"]
-        D --> E[Log: workout prefilled from the recommendation]
-        E --> F[Enter weight and reps per set]
-        F --> G{Valid?}
-        G -- "No: error next to the field,<br/>everything typed is kept" --> F
-        G -- Yes --> H[Saved to this device]
-        H --> I["Today: 'saved' message,<br/>week progress, next up"]
+    subgraph TASK["2 · The main task: do the workout"]
+        D --> E["Tap 'How are you feeling?'<br/>(tired = shorter, lighter)"]
+        E --> F["One exercise at a time:<br/>picture, how-to, weight, tap each set"]
+        F --> G{Weight a real number?}
+        G -- "No: error next to the box,<br/>what you typed is kept" --> F
+        G -- Yes --> H{More exercises?}
+        H -- "Yes (or skip / swap it)" --> F
+        H -- No --> I["Finish: look it over, add a note"]
+        I --> J{At least one set done?}
+        J -- "No: says what to do" --> F
+        J -- Yes --> K["Saved · Today: 'Workout A saved,<br/>next time: Workout B'"]
     end
-    subgraph BACK["3 · Coming back — it remembers"]
-        J([Return days later]) --> K[Read saved data from localStorage]
-        K --> L{Anything saved?}
-        L -- No --> A
-        L -- Yes --> M["Welcome back · last session · next workout + why"]
-        M --> N["Week barbell · streak · days at the gym"]
-        M --> E
+    subgraph BACK["3 · Coming back, it remembers"]
+        L([Return days or weeks later]) --> M[Read saved data from localStorage]
+        M --> N{Anything saved?}
+        N -- No --> A
+        N -- Yes --> O["Welcome back · last workout · next one + why"]
+        O --> P{How long away?}
+        P -- "2+ weeks" --> Q["Easing back in:<br/>fewer sets, lighter weights"]
+        P -- "Less" --> R["Weights from last time,<br/>adjusted by how they felt"]
+        Q --> E
+        R --> E
     end
-    I --> J
+    K --> L
 ```
 
-The same diagrams, plus the screen/state/error table and what was cut, are in
+The same diagram plus the screens, states and errors table is in
 [`flows.md`](./flows.md).
 
 ## Pages
 
 | Route | Step | What it does |
 |---|---|---|
-| `/` | First visit **and** coming back | No data → goal + days picker → today's workout. Has data → "Welcome back", the recommended workout and its reason, the week's barbell, streak. |
-| `/log` | Main task | One-column form prefilled with today's recommendation; validation errors beside each field; last-time hints and a "Use suggestion" button. |
-| `/progress` | Reason to return | Weekly barbell, month calendar of training days, every lift with its best and last set (PR tags), full session history with delete. |
-| `/plan` | Control | Change goal, days or units (saved weights convert); see the weekly rotation; reset everything (with confirm). |
+| `/` | First visit **and** coming back | No data: three-step explainer and the look picker. Has data: "Welcome back", the next workout and why, how long you have, how you feel, the exercise list with starting weights, a resume banner for an unfinished workout. |
+| `/workout` | Main task | Guided gym mode, one exercise per screen: animated figure, how-to (open the first time you meet an exercise), weight box with −/+ steps, a button per set that starts the rest timer, "How did that feel?", swap if the machine is busy, skip. Then a finish screen to review, add a note and save. Saved as you go; keeps the screen awake. |
+| `/progress` | Reason to return | Workouts, last 4 weeks, exercises learned; a calendar of gym days; each weight's trend and next suggestion; body check-in trends; full history with delete and undo. |
+| `/checkin` | Optional | Monthly body check-in: weight and a few measurements, trend only, no targets. |
+| `/plan` | Control | Change your look (the three workouts preview live), units, "What can training do?", food and sleep tips, an optional calorie and protein estimate, calendar reminders, backup/restore, reset. |
 
-Shared navigation (a thumb-height tab bar on phones, header links on desktop)
-marks the current page with `aria-current` and a bar; `/log` also has a
-"← Back to Today" link.
+Shared navigation (a thumb-height tab bar on phones, header links on desktop) marks
+the current page with `aria-current`. It hides during a workout, which has its own
+Exit, so the screen is all lifting.
 
 ## How it decides what you do next
 
-Plain rules, not AI — so the "why" on screen is always true (`lib/recommend.ts`,
-tested):
+Plain rules, not AI, so the "why" on screen is always true (`lib/workouts.ts`,
+`lib/adapt.ts`, tested):
 
-1. Your goal and days per week pick a weekly rotation (e.g. *Build muscle, 4 days
-   → Upper · Lower · Upper · Lower*).
-2. For each workout type in the rotation, it finds how long its muscles have
-   rested, using the exercises you actually logged.
-3. It recommends the most rested workout; ties follow the rotation. If nothing
-   has had two days off, it suggests a recovery day instead.
-4. Sets and reps come from your goal (strength = heavy 3–5s, muscle = 6–15, …),
-   and each lift gets a progressive-overload suggestion: add a rep, then add
-   weight once you hit the top of the range.
+1. **Your look sets the style.** Six looks (e.g. *Muscular & broad*, *Strong legs &
+   glutes*, *Toned & defined*) map to a rep style and extra work for the right muscle
+   groups. You never see the muscle groups; you pick a body.
+2. **Three full-body workouts, A → B → C, repeating.** Not tied to weekdays: whenever
+   you go, you do the next one. Because each trains your whole body, a missed week
+   leaves no gap.
+3. **It adapts to the visit:** a light intro the first time; *short / standard / long*;
+   *tired* drops the extras and a set; skipped exercises come back next time; a workout
+   less than half done is repeated.
+4. **It eases you back in:** 2–4 weeks away = one fewer set and ~10% lighter; 4–8 weeks
+   = two sets, ~20% lighter; 8+ weeks = two sets, ~30% lighter.
+5. **It remembers weights:** *Easy* → up a step next time, *Hard* → down ~10%,
+   *Just right* twice in a row → up a step.
 
-Skipping a day never breaks the plan — the next visit just picks what's most
-rested.
+## The honest part
+
+The author asked whether to tell people the truth about what training can do. Yes.
+Under the look picker and on the Plan page: *training builds strength and muscle;
+how your body looks also depends on food, sleep and time; you can't choose where you
+lose fat; "toned" usually means some muscle plus low body fat.* The app says it's
+building **toward** a look, never promises one.
+
+### Food, sleep and the body (what was added, and what wasn't)
+
+The author asked for four extras. Three were built as asked; one was built in its
+safe form:
+
+| Asked for | Built |
+|---|---|
+| Food and sleep tips | A short card on Plan: protein at meals, 7+ hours of sleep, eat before training, give it time. Nothing to log. |
+| "How are you feeling?" before each workout | One tap on Today: Fresh / Normal / Tired. Tired gives a shorter, lighter version. |
+| Monthly body check-in | `/checkin`: optional weight and measurements, trend lines only, no targets or "ideal" numbers; a gentle prompt after 28 days. |
+| Meal logging, calorie counts, weight targets | **An optional calorie and protein estimate** (Mifflin–St Jeor, adults 18+ only, shown as ranges, never below resting needs, with a "skip this if calorie counting has been stressful" line and "Delete my numbers"). **Not built:** meal-by-meal logging and weight goals. Logging needs a food database, which means an outside service the assignment rules out, and typing calories by hand is exactly the chore the app exists to remove. Weight targets were flagged as risky for body image in the research. |
 
 ## Onboarding research
 
-Three subagents studied how **Fitbod**, **Strong**, and **Nike Training Club**
-welcome new people (public sources only — they couldn't install the apps, and
-where sources conflicted or couldn't be opened, they said so). Full notes:
-[`docs/research.md`](./docs/research.md).
+Three subagents studied how **Fitbod**, **Strong**, and **Nike Training Club** welcome
+new people (public sources only). Full notes: [`docs/research.md`](./docs/research.md).
 
 | What we found | What we did |
 |---|---|
-| Fitbod: 14 onboarding steps and a paywall before the first workout. Nike: a full account before any value. Strong: sign-up first, and an empty first screen. | **No account at all**, and only **two questions** (goal, days) before a real workout. |
-| Fitbod explains its picks through muscle recovery; Strong's logger is clean with details one tap away. | A visible **"Why: …"** line on the recommendation; fast set-by-set logging with last-time hints. |
-| Fitbod and Nike use *weekly* targets and streaks. | A weekly target and a streak of **weeks** — a rest day never breaks it. |
+| Fitbod: 14 onboarding steps and a paywall before the first workout. Nike: a full account first. Strong: sign-up, then an empty screen. | **No account**, and **one question** (which body?) before a real workout. |
+| Fitbod explains its picks; Strong's logger is clean. | A visible **"Why: …"** on every recommendation; a set is one tap, not a form. |
+| Streaks and weekly targets everywhere. | **Cut**, for an irregular gym-goer they punish exactly the person the app is for. "Even one a week keeps what you've built" instead. |
 
 ## Design: "Iron"
 
-A gym should look like a gym: near-black concrete, caution-tape rules, heavy
-condensed uppercase type (Big Shoulders Display) with Barlow for reading, and a
-barbell that loads plates as you train.
+A gym should look like a gym: near-black concrete, caution-tape rules, heavy condensed
+uppercase type (Big Shoulders) with Barlow for reading.
 
-- **Safety yellow is reserved for the one primary action on a screen** and the
-  keyboard focus ring. Everything else is white, gray, or outlined.
+- **Safety yellow is reserved for the one primary action on a screen** and the focus
+  ring. Selected choices are a white fill, never yellow.
 - **Shared components** (`components/`): `Button`, `Field` (label + hint + error +
-  control), `Input`/`Select`, `Banner`, `ConfirmDialog` (native `<dialog>`),
-  the goal/days/unit pickers, `WeekBar`, `Calendar`, and the nav — used on every
-  page, no per-page restyling.
-- A stencil face was tried for numerals and **removed**: "4 × 6–10" looked like
-  "ᒧ × b–10", and for something read between sets, legibility beats style.
+  control), `Input`/`Textarea`, `Segmented`, `LookPicker`, `Silhouette`, `Banner`,
+  `Dialog`/`ConfirmDialog` (native `<dialog>`), `RestTimer`, `ExerciseFigure`,
+  `Calendar`, `Sparkline`, the nav.
+- **Exercise figures** are small animated SVGs posed from a jointed stick figure
+  (`lib/poses.ts`), one per exercise, paused when off-screen and still for
+  reduced-motion users.
 
 ### Forms and errors
 
-One column of fields, a real `<label>` on every control (set rows use visually
-hidden labels like "Barbell bench press, set 2, reps" under visible
-"Weight / Reps" column headings, like a logbook). Errors sit directly under the
-field and say what to do — *"Enter how many reps you did at this weight."* —
-never "Invalid input". On any error the form **keeps everything typed**, marks
-the field `aria-invalid`, ties the message with `aria-describedby`, and moves
-focus to the first problem.
+One column of fields with a real `<label>` each. Errors sit under the field and say
+what to do: *"Enter the weight as a number in lb, like 45 or 22.5 — or leave it
+blank."* On any error the form **keeps everything typed**, marks the field
+`aria-invalid`, ties the message with `aria-describedby`, and moves focus to the
+problem (or to an error summary listing them).
 
 ### Remembering you
 
-`localStorage` key `ironlog:v1` holds your plan and sessions. Loading validates
-every field, so corrupt or hand-edited data can't crash the app — unreadable
-parts are dropped and a notice says so. If the browser blocks storage (private
-mode), the app keeps working in memory and tells you it won't survive the tab.
-Other tabs stay in sync through the `storage` event. Clearing site data erases
-everything; the Plan page says so plainly.
+`localStorage` key `ironlog:v2` holds your look, workouts, remembered weights,
+check-ins and (if you asked for it) your estimate inputs; `ironlog:workout:v2` holds a
+workout in progress (expires after 24 h). Loading validates every field, so corrupt or
+hand-edited data can't crash the app; unreadable parts are dropped and a notice says
+so. Weights keep the unit they were typed in and convert only for display. If the
+browser blocks storage, the app keeps working in memory and says it won't survive the tab.
 
 ## Accessibility
 
-- **Keyboard:** every flow works without a mouse — tested by a script that does
-  first visit → log → save using only Tab, arrows, Space and Enter. Goal/day/unit
-  choices are real radio inputs (arrow keys work); the dialog is a native
-  `<dialog>` (focus trapped, Escape closes, focus returns); skip link on every page.
-- **Labels:** every field has a real label; icon-only controls have accessible
-  names; "Skip exercise" keeps its visible text in its accessible name.
-- **Contrast** was *computed*, not eyeballed (WCAG ratios, foreground on its
-  actual background):
+- **Keyboard:** every flow works without a mouse (scripted: onboarding with only Tab,
+  arrows, Space and Enter). Choices are real radio inputs; set buttons are toggle
+  buttons with `aria-pressed` and names like "Set 2 of 3"; moving to the next exercise
+  moves focus to its heading; dialogs trap focus and return it.
+- **Contrast** was computed (WCAG ratios, on the actual background):
 
   | Pair | Ratio | Needs |
   |---|---|---|
@@ -150,77 +174,43 @@ everything; the Plan page says so plainly.
   | Error text on surface | 7.8 : 1 | 4.5 |
   | Input border on surface | 5.2 : 1 | 3 |
 
-- **Automated audit:** axe-core (WCAG 2.0/2.1 A + AA + best practices) across 16
-  screens and states — first visit, first visit with an error, returning, log form
-  and log form with errors, progress, progress with a dialog open, plan — at 390px
-  and 1440px: no violations. (It first caught a real label-mismatch on the "Skip
-  exercise" buttons, which was fixed.)
-- Status is never color alone: errors carry a "!" mark and words, read/saved
-  states carry a ✓ and text; reduced-motion users get no animation.
-
-## Built for regular use
-
-After the first release, the app was reviewed independently and extended with what
-people need in month three, not just day one: **drafts** that survive a locked phone,
-**editing** and **undo**, **backup and restore**, **calendar reminders**, a **rest
-timer**, a **plate calculator**, **swap exercise**, **per-lift history with a trend**,
-**notes**, and **install to your home screen**. See
-[`docs/after-release.md`](./docs/after-release.md) — including a serious bug
-(a saved workout reappearing in the Log form) found by using it like a regular user,
-and how it was fixed.
+- **Automated audit:** axe-core (WCAG 2.0/2.1 A + AA + best practices) across 13 states
+  at 390px and 1440px (26 runs): first visit, its error, returning, exercise card,
+  weight error, set done with rest timer, swap dialog, finish, progress, a workout
+  opened, check-in errors, plan, estimate errors. **No violations.** (It caught one
+  real issue first: the rest timer's "+30s" button had a spoken name that didn't
+  contain its visible text, which breaks voice control. Fixed.)
 
 ## Tech and decisions
 
-Next.js (App Router) + Tailwind, TypeScript. No database, accounts, backend, or
-external APIs; no extra runtime dependencies. Tests use Node's built-in runner.
-Who decided what — the author's choices versus the agent's proposals — is recorded in
-[`docs/decisions.md`](./docs/decisions.md).
+TypeScript, Next.js (App Router) + Tailwind. No database, accounts, backend or external
+APIs; no extra runtime dependencies. Who decided what (the author's directions versus
+the agent's proposals) is recorded in [`docs/decisions.md`](./docs/decisions.md).
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
 npm run build
 npm run lint
-npm test         # 56 tests: recommendations, streaks, PRs, validation, storage, backup, drafts, plates, calendar files
+npm test         # 156 tests: plans, re-entry, weight memory, validation, storage, backup, check-ins, estimate, how-to text, figures
 ```
 
 Browser checks (Playwright, not part of the build) live in
-[`scripts/verify/`](./scripts/verify/README.md).
+[`scripts/verify/`](./scripts/verify/README.md): `v3-check.js` walks every journey (37
+checks: first visit, errors, workout, swap, reload mid-workout, save, a 6-week comeback,
+tired, check-in, estimate, keyboard-only) and `a11y-check.js` runs the axe audit.
 
 ## First-run check
 
-After deploying, an agent played a brand-new user on the live site — phone and
-desktop, told not to read the code — with the goal *"pick a goal, get a workout,
-log my first session, then come back later."* Full report, with every finding
-verified before acting on it: [`docs/first-run-check.md`](./docs/first-run-check.md).
-
-**What worked:** it understood the app in 5 seconds, got a workout in 2 taps, called
-the log form's errors the strongest part (messages beside each field, typed values
-kept, focus moved to the problem), and coming back worked ("Welcome back… last
-trained 6 days ago… last time 135 × 8 → try 135 × 9").
-
-**What it found, and what changed:**
-
-| Finding | Change |
-|---|---|
-| Saving an empty form put the error ~2,500px below where focus landed — on a phone, no visible explanation | Error now shows in the alert at the top, and focus moves to it |
-| "Last 115 × 10 → try 120 × 6" looked like a bug | Now says "(top of the range, so add weight)" |
-| After navigating, focus reset to the top; ~66 Tabs to reach Save; the focus ring faded in from white | Focus moves to the new page's heading; "Skip to Save session" link; focus ring appears instantly |
-| "Welcome back" right after the first log; "1 days" | "Nice work today"; correct plurals |
-| "What counts toward a streak?", "what if I train a different day?" | One line each on the Today screen |
-| Plan: label flipped, message below the button, rotation preview "didn't change" | Constant label, message above the button, the goal's rep scheme shown (the rotation really is the same for two goals) |
-
-**Checked and not a bug:** "Reset everything" does confirm. **Noted, not changed:**
-Progress is thin after one session; no data export or exercise swap (out of scope).
-
-This is an agent's feedback, not human testing — it couldn't test screen readers or
-real devices.
+See [`docs/first-run-check.md`](./docs/first-run-check.md). The check on this version
+is recorded at the top of that file; the check on the first release (and what changed
+because of it) follows below it.
 
 ## Known limitations
 
-- Data lives only in one browser on one device (that's the assignment's scope;
-  accounts and sync come next week). Clearing site data erases it.
-- The streak applies the *current* weekly target to past weeks.
-- Exercise suggestions are general guidance, not medical advice.
-- Checks here are agent-driven (scripts and an agent playing a new user); they
-  are not a substitute for watching real people use it.
+- Data lives in one browser on one device (the assignment's scope). Clearing site data
+  erases it; the Plan page offers a backup file.
+- Plans are general guidance for healthy adults, not medical advice or a personal
+  trainer. The calorie estimate is a population formula that can be off by 10–20%.
+- Checks here are agent-driven (scripts and an agent playing a new user), not a
+  substitute for watching real people use it.

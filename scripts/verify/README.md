@@ -1,34 +1,22 @@
-# Verification scripts
+# Browser checks
 
-Real-browser checks used while building. They are not part of the app's build.
+Playwright scripts that drive the real app. They are not part of the build or `npm test`;
+install the tools somewhere outside the repo and point `NODE_PATH` at them.
 
 ```bash
-npm i --no-save playwright axe-core
-npx playwright install chromium
-npm run dev    # or set BASE to the deployed URL
-
-node scripts/verify/flows-check.js   # the three flows end to end
-node scripts/verify/a11y-check.js    # axe-core on every screen and state
-node scripts/verify/features-check.js # drafts, edit, undo, backup/restore, reminders, timer, plates, swap …
+npm i --prefix /tmp/ironlog-tools playwright axe-core && npx --prefix /tmp/ironlog-tools playwright install chromium
+npm run build && npx next start -p 3200 &
+NODE_PATH=/tmp/ironlog-tools/node_modules BASE=http://localhost:3200 node scripts/verify/v3-check.js
+NODE_PATH=/tmp/ironlog-tools/node_modules BASE=http://localhost:3200 node scripts/verify/a11y-check.js
 ```
 
-`flows-check.js` covers: first visit (goal error, arrow keys, default days),
-persistence across reload, the form's errors (missing reps, fractional reps,
-future date) with typed values kept and focus moved, saving and the success
-message, the recommendation moving on, progression hints and "Use suggestion",
-coming back three days later (browser clock moved), progress and the calendar,
-unit conversion, delete with a confirm (Escape cancels), reset, corrupt
-storage, a **keyboard-only** journey, and no sideways scroll at 390px.
+- `v3-check.js` — 37 checks across every journey on a 390px phone: first visit and its
+  error, the guided workout (bad weight kept and flagged, −/+ steps, sets, rest timer,
+  reload mid-workout, focus on the next heading, swap, skip, save), a mostly-unfinished
+  workout being repeated, weight raised after "Easy", a 6-week comeback, "tired",
+  check-in errors and save, the calorie estimate's errors and result, keyboard-only
+  onboarding, and no page errors. Screenshots go to `$SHOTS` (default `/tmp/v3shots`).
+- `a11y-check.js` — axe-core (WCAG 2.0/2.1 A + AA + best practices) on 13 states at
+  390px and 1440px.
 
-`a11y-check.js` runs axe-core (WCAG 2.0/2.1 A + AA + best practices) on 16
-screens/states at 390px and 1440px.
-
-`flows-check.js` also contains the regression test for the stale-form bug: save a
-workout, open Log again from the tab bar, and assert nothing is pre-filled.
-
-`features-check.js` covers the features added after release: drafts (type, leave,
-resume, start over, saving clears), editing and undo-delete, notes, per-lift history,
-"Same again", arrow-key stepping, swapping, the plate calculator, the rest timer
-(using a fake clock), backup download and restore through a real file (including a
-bad file), the calendar file's contents, a unit change in another tab, and the install
-manifest and icons.
+Set `BASE` to the live URL to check production.

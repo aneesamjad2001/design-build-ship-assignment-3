@@ -1,67 +1,84 @@
 # Flows
 
 **The main task, as a sentence:**
-I pick a goal and my training days → I see today's workout right away → I log
-what I lifted → I come back later, and the app remembers me and tells me what
-to train next.
+I pick the body I want → I see my first workout right away → I do it, one exercise
+at a time, ticking off sets → I come back whenever, and the app remembers me and
+tells me what's next.
 
 ## The three flows
 
-### 1. First visit — useful right away
+### 1. First visit, useful right away
 
 ```mermaid
 flowchart TD
-    A([Open Ironlog, nothing saved]) --> B["Home: 'What are you training for?'<br/>4 goal tiles"]
-    B --> C[Pick a goal]
-    C --> D["Pick days per week<br/>(2–6, preselected 4)"]
-    D --> E[Tap 'Show my first workout']
-    E --> F["Home becomes Today:<br/>workout, sets × reps, and why"]
-    F --> G{Ready to lift?}
-    G -- Yes --> H[Log a session]
-    G -- Not now --> I[Look around: Progress, Plan]
+    A([Open Ironlog, nothing saved]) --> B["Home: 3-step explainer +<br/>'What body are you aiming for?'"]
+    B --> C["6 looks, each a figure + plain words<br/>(honest note underneath)"]
+    C --> D[Tap 'Show my plan']
+    D --> E{Picked a look?}
+    E -- "No" --> F["Error beside the looks,<br/>focus moves to the first one"]
+    F --> C
+    E -- Yes --> G["Home becomes Today:<br/>'Your first workout', a light intro, and why"]
+    G --> H{Ready to lift?}
+    H -- Yes --> I[Start workout]
+    H -- Not now --> J["Look around: Progress shows the plan,<br/>Plan shows the three workouts"]
 ```
 
-No sign-up, no tour, no empty screen — two taps from a cold start to a real
-workout.
+No sign-up, no tour, no empty screen: one tap from a cold start to a real workout.
 
-### 2. The main task — log a session (the form)
+### 2. The main task: do the workout
 
 ```mermaid
 flowchart TD
-    A[Log: workout prefilled with today's recommendation] --> B[Enter weight and reps per set]
-    B --> C[Tap 'Save session']
-    C --> D{Valid?}
-    D -- "No: reps missing or out of range,<br/>future date, no sets" --> E["Error next to the field,<br/>everything typed is kept"]
-    E --> B
-    D -- Yes --> F[Saved to this device]
-    F --> G["Home: 'Session saved'<br/>+ week progress + next up"]
-    F --> H{New personal best?}
-    H -- Yes --> I[PR flagged in Progress]
+    A["Today: How long do you have?<br/>How are you feeling?"] --> B[Start workout]
+    B --> C["Exercise card: figure, how-to,<br/>weight box (−/+), one button per set"]
+    C --> D[Tap a set → rest timer starts]
+    D --> E{"How did that feel?"}
+    E --> F{Next exercise}
+    F -- "Weight isn't a number" --> G["Error next to the box,<br/>typed text kept, focus on it"]
+    G --> C
+    F -- "Machine busy" --> H["Swap dialog → same slot,<br/>right sets/reps for the new move"]
+    H --> C
+    F -- "Skip" --> I[Marked skipped, comes back next time]
+    I --> C
+    F -- "Last one done" --> J["Finish: summary, Change any, note"]
+    J --> K{Save}
+    K -- "No sets done / bad weight" --> L["Error summary at the top,<br/>'Fix …' buttons jump back"]
+    L --> C
+    K -- OK --> M["Today: 'Workout A saved,<br/>next time: Workout B'"]
 ```
 
-### 3. Coming back — it remembers
+Every tap is saved as you go, so a locked phone, a reload or a stray tap never loses
+your place; Today offers "Resume workout".
+
+### 3. Coming back, it remembers
 
 ```mermaid
 flowchart TD
-    A([Return days later]) --> B[Ironlog reads its saved data]
+    A([Return days or weeks later]) --> B[Ironlog reads its saved data]
     B --> C{Anything saved?}
     C -- Nothing --> D[First-visit flow]
-    C -- Yes --> E["Welcome back:<br/>X of Y sessions this week"]
-    E --> F["Next up: 'Pull day'<br/>because back last trained 5 days ago"]
-    F --> G[Last-time weights shown as hints in the log form]
-    E --> H["Progress: calendar, week streak, personal bests"]
-    F --> I["Log today's session"]
+    C -- Yes --> E["Welcome back · last workout, N days ago"]
+    E --> F{Last workout less than half done?}
+    F -- Yes --> G[Repeat it]
+    F -- No --> H["Next in the rotation, plus anything skipped"]
+    G --> I{Away 2+ weeks?}
+    H --> I
+    I -- Yes --> J["Easing back in: fewer sets, lighter weights"]
+    I -- No --> K["Weights from last time,<br/>up after 'Easy', down after 'Hard'"]
+    J --> L[Start workout]
+    K --> L
+    E --> M["Monthly check-in prompt (only if you've done one before, 28+ days ago)"]
 ```
 
-## Screens and states (what the agent proposed, and what we kept)
+## Screens and states
 
 | Screen | Route | States | Errors |
 |---|---|---|---|
-| Today | `/` | loading, first visit (goal picker), returning, trained today, week target hit | storage unreadable → start fresh, say so |
-| Log | `/log` | prefilled, saving, saved | reps required (1–100), weight 0–1000, date not in the future, at least one set |
-| Progress | `/progress` | has sessions, plan-only (no sessions yet — never blank) | — |
-| Plan | `/plan` | goal, days, units, backup, reset | confirm before reset |
+| Today | `/` | loading, first visit (look picker), first workout, returning, back after a gap, tired, workout in progress | no look picked; storage unreadable → keep what's readable, say so; storage blocked → works in memory, says so |
+| Workout | `/workout` | no workout in progress, exercise card (new / done before), set done + rest, skipped, swap dialog, finish, exit confirm, discard confirm | weight not a number / over 1000; no sets done |
+| Progress | `/progress` | plan-only (never blank), has workouts, has check-ins, deleted (undo) | — |
+| Check-in | `/checkin` | empty, saved, history, deleted (undo) | no measurement; not a number; implausible value; future date |
+| Plan | `/plan` | look + live preview, units, estimate (form / result), reminders, backup, reset confirm | estimate: age (adults only), formula version, height, weight, activity |
 
-Considered and **cut** for simplicity: accounts and sync (next week's topic),
-equipment and experience questions on first visit, editing past sessions
-(delete only), rest timer, exercise videos, per-set RPE.
+Considered and **cut**: muscle or equipment questions, streaks and weekly targets,
+meal logging, weight goals, daily sleep logs, accounts and sync.

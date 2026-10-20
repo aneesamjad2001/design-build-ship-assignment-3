@@ -1,33 +1,55 @@
 # Ironlog — project context
 
-A gym tool for one person on one device: pick a physique goal and training days,
-get today's workout immediately, log sessions, and get told what to train next.
-Built for MPCS 51238 Assignment 3 (Patterns & Flows). Design, Build, Ship.
+A gym coach for one person on one device, built for someone who goes to the gym
+irregularly and arrives with no plan: pick the kind of body you're aiming for, get an
+exact workout right away, do it one exercise at a time, and come back whenever to be
+told what's next. Built for MPCS 51238 Assignment 3 (Patterns & Flows).
 
 ## Hard constraints (from the assignment)
 - Next.js + Tailwind only. **No database, accounts, backend, or external APIs.**
   No new dependencies without a strong reason.
-- Data lives in the browser's `localStorage` (key `ironlog:v1`). Never send it anywhere.
-- The recommendation logic is plain rules (`lib/recommend.ts`), not AI — keep it explainable.
+- Data lives in the browser's `localStorage` (keys `ironlog:v2`, and
+  `ironlog:workout:v2` for a workout in progress). Never send it anywhere.
+- The planning logic is plain rules (`lib/workouts.ts`, `lib/adapt.ts`), not AI. Keep
+  every "why" on screen true.
 - Every form: one column, a real label on every field, errors **next to the field**
   that say what to do next, and **keep what the person typed** on error.
 - Everything must work with a keyboard; contrast is checked, not assumed.
 - No CLAUDE.md — this file is the context file.
 
+## Product rules (from the author)
+- The person picks a **look in plain words**. Never ask them to pick muscles or
+  equipment; assume a standard commercial gym and offer a swap when something's busy.
+- No streaks, no "you missed" guilt. A gap leads to an easier workout, not a warning.
+- Be honest: training builds toward a look, it never promises one (`LOOK_NOTE`,
+  `CAN_AND_CANT` in `lib/looks.ts`).
+- No food logging or weight targets. The calorie estimate is opt-in, ranges only,
+  adults only, never below resting needs.
+
 ## Design: "Iron"
-Near-black concrete, safety-yellow accent used **only** for the primary action and
-the focus ring. Heavy condensed uppercase display type (Big Shoulders Display),
-Barlow for body. Tokens live in `app/globals.css`; use the shared components in
-`components/` — do not restyle buttons/fields ad hoc.
+Near-black concrete, safety-yellow accent used **only** for the primary action and the
+focus ring (selected choices are white). Big Shoulders for display, Barlow for body.
+Tokens live in `app/globals.css`; use the shared components in `components/` — do not
+restyle buttons or fields ad hoc.
 
 ## Layout
-- `app/` — routes: `/` Today (also the first-visit onboarding), `/log`, `/progress`, `/plan`
-- `lib/` — pure, tested logic: `exercises`, `plans`, `recommend`, `stats`, `storage`
-- `components/` — shared UI (Button, Field, NavBar, WeekBar, …)
-- `flows.md` — the flow diagrams (also in the README); `docs/research.md` — onboarding research
+- `app/` — routes: `/` Today (also first-visit onboarding), `/workout`, `/progress`,
+  `/checkin`, `/plan`
+- `lib/` — pure, tested logic: `looks`, `library`, `workouts`, `adapt`, `data`,
+  `inprogress`, `progress`, `checkin`, `nutrition`, `exerciseText`, `poses`, `backup`
+- `components/` — shared UI
+- `flows.md` — the flow diagram (also in the README); `docs/` — research, decisions,
+  first-run checks
+- `scripts/verify/` — Playwright journey check and axe audit (not part of the build)
 
 ## Commands
 `npm run dev` · `npm run build` · `npm run lint` · `npm test` (Node's built-in test runner)
+
+## Gotchas
+- Keep `cacheComponents` / `partialPrefetching` **off** in `next.config.ts`: they keep
+  old screens alive with stale form state.
+- `react-hooks/purity` flags `Date.now()` in components; use `nowMs()` from `lib/clock.ts`
+  in handlers.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

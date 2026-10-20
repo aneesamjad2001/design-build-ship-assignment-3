@@ -31,3 +31,33 @@ Who decided what, so it can be explained honestly in class.
 Accounts and sync (next week), equipment and experience questions on first
 visit, editing past sessions (delete only), rest timer, exercise videos,
 per-set effort ratings, notifications.
+
+## Version 3: rebuilt around the author's own problem (Oct 20)
+
+**The author decided:**
+- **The real problem:** "I don't go to the gym often, and when I go I have no plan."
+  Logging every set is a chore nobody keeps up; the app should say exactly what to do.
+- **Pick a body, not muscles:** "I just want to tell it what kind of body I'm aiming
+  for." No shoulder/back talk, no body map.
+- **No equipment question:** assume a standard gym.
+- **Keep the honest note** (training controls training; food, sleep and time matter;
+  "toned" depends on body fat).
+- **Build four extras:** food and sleep tips, "How are you feeling?", a monthly body
+  check-in, and meal/calorie/weight tracking.
+- Build it in small pieces with commits, so the work can be reviewed as it goes.
+
+**The agent proposed (and the author accepted by building on it):**
+- Three repeating full-body workouts (A/B/C) not tied to weekdays, so a missed week
+  leaves no gap; easing back in after 2+ weeks; repeating a workout less than half done.
+- "Finished" as one tap per set, plus remembered weights moved by Easy / Just right /
+  Hard, instead of a logbook.
+- Guided one-exercise-at-a-time gym mode with figures, how-to text, swap and skip.
+- Dropping streaks, which punish the irregular gym-goer the app is for.
+- For the fourth extra: an **optional calorie and protein estimate** (ranges, adults
+  only, never below resting needs) **instead of meal logging and weight goals** —
+  logging needs a food database (an outside service the assignment rules out) and is
+  the chore the app removes; weight targets were flagged as risky for body image.
+  The author asked for it anyway; this is the agent's call, explained in the README.
+
+**Cut for simplicity:** muscle and equipment questions, streaks, meal logging, weight
+goals, daily sleep logs, exercise videos, accounts and sync.
