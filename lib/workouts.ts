@@ -122,7 +122,7 @@ const ACCESSORY: Record<Style, Scheme> = {
 /** Timed, core and cardio movements ignore the rep style. */
 function schemeFor(e: Exercise, role: "main" | "accessory", style: Style): Scheme {
   if (e.measure === "minutes") return { sets: 1, min: 5, max: 5 };
-  if (e.measure === "seconds") return { sets: 3, min: 30, max: 45 };
+  if (e.measure === "seconds") return { sets: 3, min: 20, max: 30 };
   if (e.pattern === "core") return e.id === "cable-crunch" ? { sets: 3, min: 10, max: 15 } : { sets: 3, min: 8, max: 12 };
   return role === "main" ? MAIN[style] : ACCESSORY[style];
 }
@@ -201,7 +201,7 @@ export function buildWorkout(look: Look, key: WorkoutKey, time: TimeOption, ctx:
 
   // 3. exercises skipped last time
   if (time !== "short" && !ctx.intro) {
-    for (const id of (ctx.makeUps ?? []).slice(0, 2)) add(id, false, "accessory", "Skipped last time");
+    for (const id of (ctx.makeUps ?? []).slice(0, time === "long" ? 2 : 1)) add(id, false, "accessory", "Skipped last time");
   }
 
   // 4. a short cardio finisher for looks that call for one

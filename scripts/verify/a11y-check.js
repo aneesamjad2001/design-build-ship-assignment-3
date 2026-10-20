@@ -57,7 +57,7 @@ async function run(page, label) {
     await page.getByRole("button", { name: /Swap it/ }).click();
     bad += await run(page, `${tag} workout: swap dialog`);
     await page.keyboard.press("Escape");
-    for (let i = 0; i < 12 && !(await page.getByRole("heading", { name: "Nice work" }).count()); i++) {
+    for (let i = 0; i < 12 && !(await page.getByRole("heading", { name: /Nice work|Finish workout/ }).count()); i++) {
       await page.getByRole("button", { name: "Skip this one" }).click();
       await page.waitForTimeout(120);
     }

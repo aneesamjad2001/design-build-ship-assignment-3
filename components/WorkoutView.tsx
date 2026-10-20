@@ -196,10 +196,11 @@ function Guided({ initial, workouts, weights, today }: { initial: InProgress; wo
     finished.current = true;
     clearInProgress();
     const after = nextWorkout([...workouts, done], today);
-    const count = done.exercises.filter((e) => !e.skipped && e.setsDone > 0).length;
+    const full = done.exercises.filter((e) => !e.skipped && e.setsDone >= e.setsPlanned).length;
+    const part = done.exercises.filter((e) => !e.skipped && e.setsDone > 0 && e.setsDone < e.setsPlanned).length;
     setFlash({
       title: `${workoutTitle(done.key)} saved`,
-      detail: `${count} of ${done.exercises.length} exercises done. Next time: ${workoutTitle(after.key)}${after.repeat ? " (finishing this one first)" : ""}.`,
+      detail: `${full} of ${done.exercises.length} exercises finished${part ? `, ${part} partly done` : ""}. Next time: ${workoutTitle(after.key)}${after.repeat ? " (finishing this one first)" : ""}.`,
       path: "/",
     });
     router.push("/");
@@ -426,8 +427,6 @@ function ExerciseCard({
         />
       )}
 
-      {!hasDone && howTo}
-
       {e.weighted && (
         <Field
           id={`weight-${cur.exerciseId}`}
@@ -507,7 +506,7 @@ function ExerciseCard({
         />
       )}
 
-      {hasDone && howTo}
+      {howTo}
 
       <div className="flex flex-col gap-3">
         <Button variant="primary" onClick={onNext} className="w-full">
@@ -561,6 +560,8 @@ function FinishScreen({
     return { p, index, e, pr, check };
   });
   const doneCount = rows.filter((r) => !r.pr.skipped && r.pr.setsDone > 0).length;
+  const fullCount = rows.filter((r) => !r.pr.skipped && r.pr.setsDone >= r.p.sets).length;
+  const summary = `${fullCount} of ${rows.length} exercises finished${doneCount > fullCount ? `, ${doneCount - fullCount} partly done` : ""}`;
   const minutes = Math.max(1, Math.round((now - w.startedAt) / 60000));
 
   function save() {
@@ -592,9 +593,9 @@ function FinishScreen({
     <div className="flex flex-col gap-6">
       <header>
         <p className="font-display text-xl font-bold uppercase tracking-widest text-muted">{workoutTitle(w.planned.key)}</p>
-        <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide">Nice work</h1>
+        <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide">{doneCount > 0 ? "Nice work" : "Finish workout"}</h1>
         <p className="mt-2 text-lg text-muted">
-          About {minutes} {minutes === 1 ? "minute" : "minutes"} · {doneCount} of {rows.length} exercises done. Check it over, then save.
+          About {minutes} {minutes === 1 ? "minute" : "minutes"} · {summary}. Check it over, then save.
         </p>
       </header>
 

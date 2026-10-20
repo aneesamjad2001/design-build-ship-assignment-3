@@ -26,6 +26,7 @@ const check = (name, ok, detail = "") => {
   await page.getByRole("button", { name: "Show my plan" }).click();
   const err = page.getByText("Pick the look you're aiming for");
   check("submitting without a look explains what to do", await err.isVisible());
+  check("the error is on screen", await err.evaluate((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }));
   check("focus moves to the first look", await page.evaluate(() => document.activeElement?.getAttribute("name") === "look"));
   await page.getByText("Muscular & broad").click();
   await page.getByRole("button", { name: "Show my plan" }).click();
@@ -58,7 +59,7 @@ const check = (name, ok, detail = "") => {
   check("still on the same exercise", (await page.getByRole("heading", { level: 1 }).textContent()) === "Goblet squat");
   await weight.fill("30");
   await page.getByRole("button", { name: "Raise the weight" }).click();
-  check("+ steps the weight", (await weight.inputValue()) === "40", await weight.inputValue());
+  check("+ steps the weight by one dumbbell step", (await weight.inputValue()) === "35", await weight.inputValue());
 
   await page.getByRole("button", { name: "Set 1 of 2" }).click();
   check("rest timer starts after a set", await page.getByRole("timer").waitFor({ timeout: 2000 }).then(() => true, () => false));
@@ -88,12 +89,12 @@ const check = (name, ok, detail = "") => {
 
   // skip the rest
   for (let i = 0; i < 12; i++) {
-    const finishNow = await page.getByRole("heading", { name: "Nice work" }).count();
+    const finishNow = await page.getByRole("heading", { name: /Nice work|Finish workout/ }).count();
     if (finishNow) break;
     await page.getByRole("button", { name: "Skip this one" }).click();
     await page.waitForTimeout(150);
   }
-  await page.getByRole("heading", { name: "Nice work" }).waitFor();
+  await page.getByRole("heading", { name: /Nice work|Finish workout/ }).waitFor();
   await page.screenshot({ path: `${SHOTS}/05-finish.png`, fullPage: true });
   await page.getByLabel(/Notes/).fill("First go.");
   await page.getByRole("button", { name: "Save workout" }).click();
@@ -103,7 +104,7 @@ const check = (name, ok, detail = "") => {
   // 1 of 5 done (< 50%) -> repeat A
   const nextTitle = await page.locator("#next-heading").textContent();
   check("mostly-unfinished workout is repeated", nextTitle === "Workout A", nextTitle);
-  check("weight remembered and raised after Easy", await page.getByText("Start with 50 lb").first().isVisible());
+  check("weight remembered and raised after Easy", await page.getByText("Start with 40 lb").first().isVisible());
   const standardRows = await countRows();
   await page.getByText("Short", { exact: true }).click();
   const shortRows = await countRows();
@@ -122,7 +123,7 @@ const check = (name, ok, detail = "") => {
   await page.reload();
   await page.getByRole("heading", { name: "Welcome back" }).waitFor();
   check("comeback note after 6 weeks", await page.getByText("Welcome back after 6 weeks").first().isVisible());
-  check("eased weight after a gap", await page.getByText("Start with 40 lb").first().isVisible());
+  check("eased weight after a gap", await page.getByText("Start with 30 lb").first().isVisible());
   await page.getByText("Tired", { exact: true }).click();
   check("tired gives a lighter version", await page.getByText("You said you're tired").first().isVisible());
 

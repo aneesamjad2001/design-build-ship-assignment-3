@@ -486,7 +486,7 @@ export const EXERCISE_TEXT: Record<string, ExerciseText> = {
     mistake:
       "Holding on while your hips sag or poke up. End the hold as soon as your form slips, rest, then start another short one.",
     startTip:
-      "This one is timed: start with 3 holds of 10 to 20 seconds, resting between them. Stop each hold about 5 seconds before your form would break, and add a few seconds each visit.",
+      "This one is timed: hold for the time shown, resting between holds. If your hips start to sag sooner, stop there (even 10 seconds counts) and add a few seconds each visit.",
     safety: "Stop if you feel sharp pain in your lower back.",
   },
 

@@ -26,6 +26,11 @@ export function LookPicker({
   return (
     <fieldset aria-describedby={error ? "look-error" : undefined}>
       <legend className="mb-3 font-display text-3xl font-extrabold uppercase tracking-wide">{legend}</legend>
+      {error && (
+        <div className="mb-3">
+          <FieldError id="look-error">{error}</FieldError>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {LOOKS.map((l) => (
           <label key={l.id} className={tile}>
@@ -40,11 +45,6 @@ export function LookPicker({
           </label>
         ))}
       </div>
-      {error && (
-        <div className="mt-3">
-          <FieldError id="look-error">{error}</FieldError>
-        </div>
-      )}
       {showNote && <p className="mt-3 max-w-prose text-sm text-muted">{LOOK_NOTE}</p>}
     </fieldset>
   );

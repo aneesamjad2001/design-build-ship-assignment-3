@@ -89,7 +89,8 @@ export function nextWorkout(workouts: CompletedWorkout[], today: string): NextUp
 /** How much weight changes by in one step. */
 export function weightStep(e: Exercise, unit: Unit): number {
   if (e.pattern === "isolation") return unit === "lb" ? 2.5 : 1;
-  if (e.lower) return unit === "lb" ? 10 : 5;
+  // one dumbbell (goblet and split squats) moves in dumbbell steps, not machine/barbell steps
+  if (e.lower && e.id !== "goblet-squat" && e.id !== "split-squat") return unit === "lb" ? 10 : 5;
   return unit === "lb" ? 5 : 2.5;
 }
 
@@ -101,7 +102,9 @@ export function suggestedWeight(exerciseId: string, book: WeightBook, daysAway: 
   const m = book[exerciseId];
   if (!e || !e.weighted || !m || m.unit !== unit) return null;
   const factor = reentry(daysAway).weightFactor;
-  const w = factor === 1 ? m.weight : roundTo(m.weight * factor, weightStep(e, unit));
+  const step = weightStep(e, unit);
+  // after a gap, always at least one step lighter (rounding alone could leave it unchanged)
+  const w = factor === 1 ? m.weight : Math.min(roundTo(m.weight * factor, step), m.weight - step);
   return Math.max(0, w);
 }
 

@@ -61,7 +61,8 @@ function Onboarding() {
     e.preventDefault();
     if (!look) {
       setError("Pick the look you're aiming for so we can build your plan.");
-      formRef.current?.querySelector<HTMLInputElement>('input[name="look"]')?.focus();
+      formRef.current?.querySelector<HTMLInputElement>('input[name="look"]')?.focus({ preventScroll: true });
+      formRef.current?.querySelector("legend")?.scrollIntoView({ block: "start" });
       return;
     }
     chooseLook(look);

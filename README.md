@@ -196,15 +196,40 @@ npm test         # 156 tests: plans, re-entry, weight memory, validation, storag
 ```
 
 Browser checks (Playwright, not part of the build) live in
-[`scripts/verify/`](./scripts/verify/README.md): `v3-check.js` walks every journey (37
+[`scripts/verify/`](./scripts/verify/README.md): `v3-check.js` walks every journey (38
 checks: first visit, errors, workout, swap, reload mid-workout, save, a 6-week comeback,
 tired, check-in, estimate, keyboard-only) and `a11y-check.js` runs the axe audit.
 
 ## First-run check
 
-See [`docs/first-run-check.md`](./docs/first-run-check.md). The check on this version
-is recorded at the top of that file; the check on the first release (and what changed
-because of it) follows below it.
+After deploying, an agent played a brand-new, irregular gym-goer on the live site
+(phone, plus a desktop look), told not to read the code, with the goal *"tell it the
+body I want, do my first workout, save it, come back weeks later."* Full report:
+[`docs/first-run-check.md`](./docs/first-run-check.md) (the first release's check, and
+what changed then, is below it).
+
+**What worked:** understood in 5 seconds; 3 taps to a real workout; keyboard-only
+onboarding; each exercise "very clear for a beginner"; every error next to the problem
+with typed text kept; after a faked 5-week gap: *"Welcome back after 5 weeks — easing
+in with two sets and lighter weights"*, the next workout with its reason, and the
+skipped exercise brought back.
+
+**What it found, and what changed:**
+
+| Finding | Change |
+|---|---|
+| Bug: the "pick a look" error was off-screen on a phone | Error above the cards, page scrolls to it; now asserted by the journey check |
+| Bug: plank target (30–45 s) contradicted its tip (10–20 s) | 20–30 s holds; the tip matches |
+| Visit 2 jumped to 9 exercises (~70 min) | One make-up exercise on a standard day |
+| "Nice work" with nothing done; half-done exercises counted as done | "Finish workout"; "2 finished, 2 partly done" |
+| "20kg" rejected without a reason | Says to type just the number and where to switch units |
+| How-to pushed the controls two screens down | Weight and sets first, how-to underneath |
+| "Lighter weights" after a gap, but one stayed the same | Always at least one step lighter |
+| +/− moved a single dumbbell 10 lb | 5 lb steps for single-dumbbell moves |
+| The six figures looked alike | Redrawn with clearer proportions |
+
+This is an agent's feedback, not human testing: no real phone, screen reader or real
+time away.
 
 ## Known limitations
 

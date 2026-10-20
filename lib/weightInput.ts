@@ -7,6 +7,8 @@ import type { Unit } from "./adapt.ts";
 export function validateWeightText(text: string, unit: Unit): { value: number | null; error?: string } {
   const t = text.trim();
   if (!t) return { value: null };
+  if (/[a-z]/i.test(t) && /\d/.test(t) && /(kg|lb|lbs|pounds?|kilos?)\s*$/i.test(t))
+    return { value: null, error: `Enter just the number — weights are in ${unit} (you can switch units on the Plan page).` };
   const n = parseDecimal(t);
   if (Number.isNaN(n)) return { value: null, error: `Enter the weight as a number in ${unit}, like ${unit === "lb" ? "45 or 22.5" : "20 or 12.5"} — or leave it blank.` };
   if (n > MAX_WEIGHT) return { value: null, error: `That's more than ${MAX_WEIGHT} ${unit}. Check the number.` };

@@ -1,4 +1,47 @@
-# First-run check
+# First-run checks
+
+## This version (v3: pick a body, guided workout), Oct 20
+
+After deploying, a subagent played a **brand-new user** of the live site. It was told
+not to read any code, only to judge what a person sees, and drove a real browser
+(Playwright) on a phone (390×844) with a short desktop check (1440×900). Persona: goes
+to the gym irregularly, no plan, no muscle jargon, hates logbooks. Goal: *"tell it the
+body I want, get a workout, do my first workout, save it, then come back later and see
+whether it remembers me and tells me what to do next."* It tried mistakes on purpose
+(continuing without a choice, "abc" and "20kg" as weights, saving with nothing done,
+keyboard only). To fake weeks away it edited the saved workout dates (and said so).
+
+**What worked:** understood it in 5 seconds ("plain words, no jargon"); one scroll and
+3 taps to a real workout; keyboard-only onboarding worked with a visible focus ring;
+each exercise was "very clear for a beginner" (moving figure, set-up steps, common
+mistake, how to pick a first weight); rest timer, feel buttons, skip, swap, exit and
+resume all worked; every error was next to the problem and kept what was typed; and
+coming back after 5 weeks said *"Welcome back after 5 weeks — easing in with two sets
+and lighter weights"*, moved on to Workout B with the reason, brought back the skipped
+exercise ("Skipped last time"), and lowered the remembered weights.
+
+**What it found, and what changed** (each finding was reproduced before fixing):
+
+| Finding | Change |
+|---|---|
+| **Bug:** on a phone, "Pick the look you're aiming for…" appeared below all six cards, off-screen, after the page jumped to the first card | The error now sits above the cards and the page scrolls to the question; the journey check now asserts the error is on screen |
+| **Bug:** plank said "2 sets × 30–45 sec" but its tip said "start with 3 holds of 10 to 20 seconds" | Holds are 20–30 sec and the tip says "hold for the time shown… if your hips sag sooner, stop there" |
+| Second visit jumped from a 5-exercise intro to 9 exercises, ~70 min | Only one skipped exercise is added back on a standard day (two on a long day) |
+| Empty save screen still said "Nice work" | Says "Finish workout" until a set is done |
+| "4 of 5 exercises done" counted half-done ones | "2 of 5 exercises finished, 2 partly done" |
+| "20kg" rejected without saying why | "Enter just the number — weights are in lb (you can switch units on the Plan page)." |
+| Open how-to pushed the weight box and set buttons two screens down | Weight and sets come first; the how-to (still open for a new exercise) sits under them |
+| "Lighter weights" promised, but a 20 lb goblet squat stayed 20 lb (rounding) | After a gap, every weight drops at least one step |
+| +/− moved a goblet squat dumbbell 10 lb at a time | Single-dumbbell lower-body moves step 5 lb (2.5 kg); machines and barbells keep 10 |
+
+It also said the six body figures looked almost the same; they were redrawn just before
+(separate legs, stronger shoulder and hip differences).
+
+**Limits:** headless Chromium, not a real phone (no touch keyboard, no Safari); time
+away was faked; no screen reader; backup, calendar file, check-ins and kg weren't tried
+by the agent (the scripted checks cover check-ins and the estimate).
+
+## Earlier release (version 1: goals, days per week, logbook)
 
 After deploying, a subagent played a **brand-new user** of the live site
 (`https://design-build-ship-assignment-3.vercel.app`). It was told not to read

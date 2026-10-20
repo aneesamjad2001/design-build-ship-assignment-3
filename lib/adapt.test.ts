@@ -53,7 +53,7 @@ describe("next workout", () => {
 });
 
 describe("weights", () => {
-  const squat = getExercise("goblet-squat")!;
+  const squat = getExercise("leg-press")!;
   const curl = getExercise("dumbbell-curl")!;
   const press = getExercise("dumbbell-bench-press")!;
 

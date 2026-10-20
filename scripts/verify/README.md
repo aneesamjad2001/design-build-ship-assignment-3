@@ -10,7 +10,7 @@ NODE_PATH=/tmp/ironlog-tools/node_modules BASE=http://localhost:3200 node script
 NODE_PATH=/tmp/ironlog-tools/node_modules BASE=http://localhost:3200 node scripts/verify/a11y-check.js
 ```
 
-- `v3-check.js` — 37 checks across every journey on a 390px phone: first visit and its
+- `v3-check.js` — 38 checks across every journey on a 390px phone: first visit and its
   error, the guided workout (bad weight kept and flagged, −/+ steps, sets, rest timer,
   reload mid-workout, focus on the next heading, swap, skip, save), a mostly-unfinished
   workout being repeated, weight raised after "Easy", a 6-week comeback, "tired",

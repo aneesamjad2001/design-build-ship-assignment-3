@@ -61,12 +61,13 @@ describe("weight box", () => {
   });
 
   it("explains what to do for anything else", () => {
-    for (const bad of ["abc", "-5", "45lb", "1e3", "4 5"]) {
+    for (const bad of ["abc", "-5", "1e3", "4 5"]) {
       const r = validateWeightText(bad, "lb");
       assert.equal(r.value, null);
       assert.match(r.error ?? "", /number in lb/);
     }
     assert.match(validateWeightText("5000", "lb").error ?? "", /more than 1000/);
+    assert.match(validateWeightText("20kg", "lb").error ?? "", /just the number .* in lb .*Plan page/);
   });
 });
 
@@ -85,7 +86,7 @@ describe("not available swaps", () => {
   it("changes reps to seconds when swapping to a timed hold", () => {
     const crunch = { exerciseId: "dead-bug", sets: 3, min: 8, max: 12, core: false };
     const plank = swapPlanned(crunch, "plank", look.style)!;
-    assert.deepEqual([plank.min, plank.max], [30, 45]);
+    assert.deepEqual([plank.min, plank.max], [20, 30]);
   });
 
   it("refuses an unknown exercise", () => {
