@@ -158,6 +158,17 @@ everything; the Plan page says so plainly.
 - Status is never color alone: errors carry a "!" mark and words, read/saved
   states carry a ✓ and text; reduced-motion users get no animation.
 
+## Built for regular use
+
+After the first release, the app was reviewed independently and extended with what
+people need in month three, not just day one: **drafts** that survive a locked phone,
+**editing** and **undo**, **backup and restore**, **calendar reminders**, a **rest
+timer**, a **plate calculator**, **swap exercise**, **per-lift history with a trend**,
+**notes**, and **install to your home screen**. See
+[`docs/after-release.md`](./docs/after-release.md) — including a serious bug
+(a saved workout reappearing in the Log form) found by using it like a regular user,
+and how it was fixed.
+
 ## Tech and decisions
 
 Next.js (App Router) + Tailwind, TypeScript. No database, accounts, backend, or
@@ -170,7 +181,7 @@ npm install
 npm run dev      # http://localhost:3000
 npm run build
 npm run lint
-npm test         # 30 tests: recommendations, streaks, PRs, validation, storage
+npm test         # 56 tests: recommendations, streaks, PRs, validation, storage, backup, drafts, plates, calendar files
 ```
 
 Browser checks (Playwright, not part of the build) live in

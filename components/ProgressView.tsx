@@ -130,7 +130,8 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
                 return (
                   <li key={exerciseId}>
                     <details>
-                      <summary className="cursor-pointer py-3">
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                           <p className="text-lg font-semibold">
                             {getExercise(exerciseId)?.name}{" "}
@@ -146,6 +147,10 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
                           Best on {shortDate(best.date)} · last time {fmtSet(last.set, unit)} on {shortDate(last.date)} · {times}{" "}
                           {times === 1 ? "session" : "sessions"}
                         </p>
+                       </div>
+                        <span aria-hidden className="pt-2 text-muted">
+                          ▾
+                        </span>
                       </summary>
                       <div className="pb-4">
                         {times > 1 && (

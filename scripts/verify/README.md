@@ -9,6 +9,7 @@ npm run dev    # or set BASE to the deployed URL
 
 node scripts/verify/flows-check.js   # the three flows end to end
 node scripts/verify/a11y-check.js    # axe-core on every screen and state
+node scripts/verify/features-check.js # drafts, edit, undo, backup/restore, reminders, timer, plates, swap …
 ```
 
 `flows-check.js` covers: first visit (goal error, arrow keys, default days),
@@ -21,3 +22,13 @@ storage, a **keyboard-only** journey, and no sideways scroll at 390px.
 
 `a11y-check.js` runs axe-core (WCAG 2.0/2.1 A + AA + best practices) on 16
 screens/states at 390px and 1440px.
+
+`flows-check.js` also contains the regression test for the stale-form bug: save a
+workout, open Log again from the tab bar, and assert nothing is pre-filled.
+
+`features-check.js` covers the features added after release: drafts (type, leave,
+resume, start over, saving clears), editing and undo-delete, notes, per-lift history,
+"Same again", arrow-key stepping, swapping, the plate calculator, the rest timer
+(using a fake clock), backup download and restore through a real file (including a
+bad file), the calendar file's contents, a unit change in another tab, and the install
+manifest and icons.

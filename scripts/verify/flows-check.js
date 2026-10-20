@@ -200,9 +200,13 @@ async function waitUrl(pg, path, what) {
     check(await tabTo(() => document.activeElement?.textContent === "Log this workout"), "keyboard: cannot reach the primary action");
     await k.keyboard.press("Enter");
     await waitUrl(k, "/log", "keyboard: Enter on the primary action");
+    // wait for the form and for focus to land on its heading before tabbing, as a person would
+    await k.waitForSelector("text=Log a session");
+    const onHeading = await k.waitForFunction(() => document.activeElement?.tagName === "H1", null, { timeout: 8000 }).then(() => true, () => false);
+    check(onHeading, "keyboard: focus did not land on the Log page heading");
     check(await tabTo(() => document.activeElement?.id === "ex0-set0-reps", 80), "keyboard: cannot Tab to the first reps field");
     await k.keyboard.type("5");
-    check(await tabTo(() => document.activeElement?.textContent?.includes("Save session"), 120), "keyboard: cannot Tab to Save session");
+    check(await tabTo(() => document.activeElement?.textContent?.includes("Save session"), 200), "keyboard: cannot Tab to Save session");
     await k.keyboard.press("Enter");
     await waitUrl(k, "/", "keyboard: saving with Enter");
     check((await k.locator("body").textContent()).includes("saved"), "keyboard: saving with Enter did not work");
