@@ -98,7 +98,7 @@ export function RestTimer({ request, className = "bottom-14 md:bottom-0" }: { re
               <div className="h-2 flex-1 bg-line" aria-hidden>
                 <div className="h-full bg-ink transition-[width] duration-200 ease-linear" style={{ width: `${(remaining / running.total) * 100}%` }} />
               </div>
-              <Button variant="secondary" onClick={() => start(remaining + 30)} className="!min-h-11 !px-3 !text-base" aria-label="Add 30 seconds">
+              <Button variant="secondary" onClick={() => start(remaining + 30)} className="!min-h-11 !px-3 !text-base" aria-label="+30s: add 30 seconds">
                 +30s
               </Button>
               <Button variant="ghost" onClick={() => setPhase({ kind: "idle" })} className="!min-h-11 !px-2 !text-base">

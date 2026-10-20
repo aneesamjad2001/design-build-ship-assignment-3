@@ -224,6 +224,9 @@ function Today({
         </p>
 
         <div className="mt-5 flex flex-col gap-4">
+          {next.isFirst ? (
+            <p className="text-sm text-muted">Your first one is short on purpose. Next time you can choose how long you have.</p>
+          ) : (
           <Segmented<TimeOption>
             legend="How long do you have?"
             name="time"
@@ -235,6 +238,7 @@ function Today({
               { value: "long", label: "Long", sub: `about ${minutes.long} min` },
             ]}
           />
+          )}
           <Segmented<Feeling>
             legend="How are you feeling?"
             name="feeling"
@@ -301,7 +305,10 @@ function Today({
               aria-current={k === next.key ? "step" : undefined}
               className={`border-2 px-2 py-3 text-center ${k === next.key ? "border-ink bg-ink text-accent-ink" : "border-line"}`}
             >
-              <span className="block font-display text-2xl font-extrabold uppercase tracking-wide">Workout {k}</span>
+              <span className="block font-display text-4xl font-black uppercase leading-none">
+                <span className="sr-only">Workout </span>
+                {k}
+              </span>
               <span className={`block text-sm ${k === next.key ? "text-[#333333]" : "text-muted"}`}>{k === next.key ? "Next" : last?.key === k ? "Last done" : " "}</span>
             </li>
           ))}
