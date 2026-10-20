@@ -4,23 +4,19 @@ import { useEffect, useRef } from "react";
 import { Button } from "./Button";
 
 /**
- * Native <dialog> confirm box: showModal() makes the page inert and traps
- * focus; Escape and the backdrop close it; focus returns to whatever opened it.
+ * Native <dialog>: showModal() makes the page inert and traps focus; Escape and
+ * the backdrop close it; focus returns to whatever opened it.
  */
-export function ConfirmDialog({
+export function Dialog({
   open,
-  title,
-  body,
-  confirmLabel,
-  onConfirm,
-  onCancel,
+  onClose,
+  labelledBy,
+  children,
 }: {
   open: boolean;
-  title: string;
-  body: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onClose: () => void;
+  labelledBy: string;
+  children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -39,38 +35,64 @@ export function ConfirmDialog({
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    const onClose = () => {
+    const onCloseEvent = () => {
       const o = opener.current;
       if (o && document.contains(o)) o.focus();
-      onCancel();
+      onClose();
     };
     const onClick = (e: MouseEvent) => {
       if (e.target === d) d.close();
     };
-    d.addEventListener("close", onClose);
+    d.addEventListener("close", onCloseEvent);
     d.addEventListener("click", onClick);
     return () => {
-      d.removeEventListener("close", onClose);
+      d.removeEventListener("close", onCloseEvent);
       d.removeEventListener("click", onClick);
     };
-  }, [onCancel]);
+  }, [onClose]);
 
   return (
-    <dialog ref={ref} aria-labelledby="confirm-title" className="sheet">
+    <dialog ref={ref} aria-labelledby={labelledBy} className="sheet">
+      {children}
+    </dialog>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel = "Keep it",
+  tone = "danger",
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "danger" | "primary";
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Dialog open={open} onClose={onCancel} labelledBy="confirm-title">
       <div className="p-6">
         <h2 id="confirm-title" className="font-display text-3xl font-extrabold uppercase tracking-wide">
           {title}
         </h2>
         <p className="mt-2 text-muted">{body}</p>
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={() => ref.current?.close()}>
-            Keep it
+          <Button variant="secondary" onClick={onCancel}>
+            {cancelLabel}
           </Button>
-          <Button variant="danger" onClick={onConfirm}>
+          <Button variant={tone} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

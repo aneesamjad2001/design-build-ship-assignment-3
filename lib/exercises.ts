@@ -136,3 +136,12 @@ export const DAY_ORDER: DayType[] = ["push", "pull", "legs", "upper", "lower", "
 export function muscleLabel(m: Muscle): string {
   return m === "conditioning" ? "conditioning" : m;
 }
+
+/** Other movements that share a primary muscle, same kind first — for swapping. */
+export function alternativesFor(id: string): Exercise[] {
+  const ex = byId.get(id);
+  if (!ex) return [];
+  return EXERCISES.filter((e) => e.id !== id && e.kind !== "conditioning" && ex.kind !== "conditioning" && e.primary.some((m) => ex.primary.includes(m))).sort(
+    (a, b) => Number(b.kind === ex.kind) - Number(a.kind === ex.kind),
+  );
+}

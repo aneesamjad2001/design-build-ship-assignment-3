@@ -6,9 +6,14 @@ import { workoutFor, planFor, prescribe } from "./plans.ts";
 import { getExercise } from "./exercises.ts";
 import { convertWeight, parseData, serialize, sessionsIn, EMPTY_DATA } from "./storage.ts";
 import type { Profile, Session } from "./storage.ts";
-import { daysInWeek, findNewPRs, latestIsRecord, weeklyStreak } from "./stats.ts";
+import { daysInWeek, findNewPRs, latestIsRecord, liftHistory, weeklyStreak } from "./stats.ts";
 import { validateSession, setKey } from "./validate.ts";
 import type { SessionForm } from "./validate.ts";
+import { buildBackup, describeBackup, readBackup } from "./backup.ts";
+import { hasTypedData, parseDraft } from "./draft.ts";
+import { describePlates, plateBreakdown } from "./plates.ts";
+import { buildCalendar, fold, isTime, nextWeekday, suggestedDays } from "./ics.ts";
+import { convertFormWeights, formFromSession, repeatLastSet, stepValue, swapOptions } from "./formstate.ts";
 
 // 2026-10-19 is a Monday.
 const MON = "2026-10-19";
@@ -319,5 +324,174 @@ describe("storage", () => {
     assert.equal(convertWeight(135, "lb", "kg"), 61);
     assert.equal(convertWeight(60, "kg", "lb"), 132.5);
     assert.equal(convertWeight(100, "lb", "lb"), 100);
+  });
+});
+
+describe("backup", () => {
+  const data = { ...EMPTY_DATA, profile: profile(), sessions: [sess("2026-10-12", "push", "bench-press", 135, 8), sess(MON, "pull", "barbell-row", 115, 8)] };
+
+  it("round-trips through a file", () => {
+    const r = readBackup(buildBackup(data, new Date("2026-10-20T10:00:00Z")));
+    assert.equal(r.ok, true);
+    if (r.ok) {
+      assert.equal(r.recovered, false);
+      assert.deepEqual(r.data.sessions.map((s) => s.id), data.sessions.map((s) => s.id));
+      assert.equal(r.data.profile?.goal, "muscle");
+    }
+  });
+
+  it("explains what is wrong with a bad file and what to do", () => {
+    for (const text of ["", "   ", "not json at all", "[]", '{"version":1,"profile":null,"sessions":[]}', '{"hello":"world"}']) {
+      const r = readBackup(text);
+      assert.equal(r.ok, false, `should reject: ${text}`);
+      if (!r.ok) assert.match(r.error, /Choose/);
+    }
+  });
+
+  it("flags a backup that had to be cleaned", () => {
+    const dirty = JSON.stringify({ version: 1, profile: profile(), sessions: [{ id: "x", date: "bad", focus: "push", entries: [] }, ...data.sessions] });
+    const r = readBackup(dirty);
+    assert.equal(r.ok, true);
+    if (r.ok) assert.equal(r.recovered, true);
+  });
+
+  it("describes what is inside", () => {
+    assert.match(describeBackup(data), /2 sessions from .* to .* · Build muscle, 4 days a week/);
+    assert.match(describeBackup({ ...data, sessions: [] }), /plan only/i);
+  });
+});
+
+describe("draft", () => {
+  const NOW = 1_800_000_000_000;
+  const form = (reps = ""): SessionForm => ({ date: MON, focus: "push", exercises: [{ exerciseId: "bench-press", sets: [{ weight: "135", reps }] }] });
+  const raw = (over: object = {}) => JSON.stringify({ savedAt: NOW - 1000, unit: "lb", note: "", form: form("8"), ...over });
+
+  it("only counts typed data", () => {
+    assert.equal(hasTypedData({ date: MON, focus: "push", exercises: [{ exerciseId: "bench-press", sets: [{ weight: "", reps: "" }] }] }), false);
+    assert.equal(hasTypedData(form("8")), true);
+    assert.equal(hasTypedData({ date: MON, focus: "push", exercises: [] }, "felt strong"), true);
+  });
+
+  it("restores a recent draft", () => {
+    const d = parseDraft(raw(), NOW);
+    assert.equal(d?.form.exercises[0].sets[0].reps, "8");
+  });
+
+  it("ignores old, malformed, or hostile drafts instead of crashing", () => {
+    assert.equal(parseDraft(raw({ savedAt: NOW - 25 * 3600 * 1000 }), NOW), null);
+    assert.equal(parseDraft("{nope", NOW), null);
+    assert.equal(parseDraft(null, NOW), null);
+    assert.equal(parseDraft(raw({ unit: "stone" }), NOW), null);
+    assert.equal(parseDraft(raw({ form: { date: MON, focus: "dance", exercises: [] } }), NOW), null);
+    assert.equal(parseDraft(raw({ form: { date: MON, focus: "push", exercises: [{ exerciseId: "nope", sets: [] }] } }), NOW), null);
+  });
+});
+
+describe("plates", () => {
+  it("loads the bar greedily, per side", () => {
+    assert.deepEqual(plateBreakdown(225, 45, "lb").perSide, [{ plate: 45, count: 2 }]);
+    assert.deepEqual(plateBreakdown(135, 45, "lb").perSide, [{ plate: 45, count: 1 }]);
+    assert.deepEqual(plateBreakdown(100, 45, "lb").perSide, [{ plate: 25, count: 1 }, { plate: 2.5, count: 1 }]);
+    assert.deepEqual(plateBreakdown(62.5, 20, "kg").perSide, [{ plate: 20, count: 1 }, { plate: 1.25, count: 1 }]);
+  });
+  it("says so when the weight can't be built or is under the bar", () => {
+    const odd = plateBreakdown(46, 45, "lb");
+    assert.equal(odd.exact, false);
+    assert.equal(odd.achieved, 45);
+    assert.equal(plateBreakdown(30, 45, "lb").belowBar, true);
+    assert.equal(describePlates(plateBreakdown(45, 45, "lb")), "Just the bar.");
+    assert.equal(describePlates(plateBreakdown(225, 45, "lb")), "2 × 45 on each side");
+  });
+});
+
+describe("form helpers", () => {
+  const set = (weight: string, reps: string) => ({ weight, reps });
+  it("repeats the last filled set into the next empty row", () => {
+    const out = repeatLastSet([set("135", "8"), set("", ""), set("", "")]);
+    assert.deepEqual(out, [set("135", "8"), set("135", "8"), set("", "")]);
+  });
+  it("adds a row when there is no empty one, and does nothing with nothing to copy", () => {
+    assert.equal(repeatLastSet([set("135", "8"), set("135", "7")]).length, 3);
+    const blank = [set("", ""), set("", "")];
+    assert.equal(repeatLastSet(blank), blank);
+  });
+  it("re-expresses typed weights in another unit and leaves junk alone", () => {
+    const f = { date: MON, focus: "push", exercises: [{ exerciseId: "bench-press", sets: [set("135", "8"), set("abc", "8"), set("", "8")] }] };
+    const kg = convertFormWeights(f, "lb", "kg").exercises[0].sets;
+    assert.equal(kg[0].weight, "61");
+    assert.equal(kg[1].weight, "abc");
+    assert.equal(kg[2].weight, "");
+  });
+  it("steps a number up and down, never below the minimum, and leaves junk alone", () => {
+    assert.equal(stepValue("135", 1, 5, 0), "140");
+    assert.equal(stepValue("135", -1, 5, 0), "130");
+    assert.equal(stepValue("", 1, 5, 0), "5");
+    assert.equal(stepValue("2", -1, 5, 0), "0");
+    assert.equal(stepValue("8", -1, 1, 1), "7");
+    assert.equal(stepValue("1", -1, 1, 1), "1");
+    assert.equal(stepValue("abc", 1, 5, 0), "abc");
+    assert.equal(stepValue("62.5", 1, 2.5, 0), "65");
+  });
+  it("turns a saved session back into editable text", () => {
+    const s = { ...sess(MON, "push", "bench-press", 135.5, 8), entries: [{ exerciseId: "push-up", sets: [{ weight: null, reps: 20 }] }, { exerciseId: "bench-press", sets: [{ weight: 135.5, reps: 8 }] }] };
+    const form = formFromSession(s);
+    assert.deepEqual(form.exercises[0].sets, [set("", "20")]);
+    assert.deepEqual(form.exercises[1].sets, [set("135.5", "8")]);
+  });
+  it("offers swaps that train the same muscle, never the exercise itself or ones already in the session", () => {
+    const opts = swapOptions("bench-press", ["bench-press"]).map((e) => e.id);
+    assert.ok(opts.includes("incline-db-press") && opts.includes("push-up"));
+    assert.ok(!opts.includes("bench-press") && !opts.includes("squat"));
+    assert.ok(!swapOptions("bench-press", ["incline-db-press"]).some((e) => e.id === "incline-db-press"));
+    assert.equal(swapOptions("kettlebell-swing", []).length, 0); // conditioning isn't swapped for strength work
+  });
+});
+
+describe("lift history", () => {
+  it("lists each session once, oldest first, with top set and volume", () => {
+    const a = { ...sess("2026-10-12", "push", "bench-press", 135, 8), entries: [{ exerciseId: "bench-press", sets: [{ weight: 135, reps: 8 }, { weight: 145, reps: 5 }] }] };
+    const b = sess("2026-10-05", "push", "bench-press", 125, 10);
+    const h = liftHistory([a, b, sess("2026-10-08", "pull", "barbell-row", 100, 8)], "bench-press");
+    assert.deepEqual(h.map((x) => x.date), ["2026-10-05", "2026-10-12"]);
+    assert.deepEqual(h[1].top, { weight: 145, reps: 5 });
+    assert.equal(h[1].volume, 135 * 8 + 145 * 5);
+    assert.equal(h[0].volume, 1250);
+  });
+  it("counts reps alone as the volume of bodyweight sets", () => {
+    const h = liftHistory([{ ...sess("2026-10-12", "push", "push-up", null, 20), entries: [{ exerciseId: "push-up", sets: [{ weight: null, reps: 20 }, { weight: null, reps: 15 }] }] }], "push-up");
+    assert.equal(h[0].volume, 35);
+  });
+});
+
+describe("calendar reminders", () => {
+  const NOW = new Date(2026, 9, 20, 9, 30, 0); // Tue Oct 20 2026, local time
+  it("builds one weekly event per chosen day, with a 30-minute alarm", () => {
+    const ics = buildCalendar({ days: [0, 2, 4], time: "18:00", siteUrl: "https://example.com", now: NOW });
+    assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, 3);
+    assert.match(ics, /RRULE:FREQ=WEEKLY;BYDAY=MO/);
+    assert.match(ics, /RRULE:FREQ=WEEKLY;BYDAY=WE/);
+    assert.match(ics, /RRULE:FREQ=WEEKLY;BYDAY=FR/);
+    assert.match(ics, /TRIGGER:-PT30M/);
+    assert.match(ics, /DTSTART:20261026T180000/); // next Monday after Tue Oct 20
+    assert.match(ics, /DTEND:20261026T190000/);
+    assert.ok(ics.startsWith("BEGIN:VCALENDAR\r\n") && ics.endsWith("END:VCALENDAR\r\n"));
+  });
+  it("starts today when today is a chosen day, and handles an evening that crosses midnight", () => {
+    assert.equal(nextWeekday("2026-10-20", 1), "2026-10-20"); // Tuesday itself
+    assert.equal(nextWeekday("2026-10-20", 0), "2026-10-26");
+    assert.match(buildCalendar({ days: [1], time: "23:30", minutes: 60, siteUrl: "x", now: NOW }), /DTEND:20261020T003000/);
+  });
+  it("never repeats a day and keeps lines within 75 bytes", () => {
+    const ics = buildCalendar({ days: [0, 0, 0], time: "07:15", siteUrl: "https://example.com/" + "a".repeat(200), now: NOW });
+    assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, 1);
+    for (const line of ics.split("\r\n")) assert.ok(new TextEncoder().encode(line).length <= 75, `too long: ${line.length}`);
+    assert.equal(fold("a".repeat(100)).split("\r\n").length, 2);
+  });
+  it("suggests a spread of days and validates times", () => {
+    assert.deepEqual(suggestedDays(3), [0, 2, 4]);
+    assert.equal(suggestedDays(4).length, 4);
+    assert.equal(isTime("18:00"), true);
+    assert.equal(isTime("25:00"), false);
+    assert.equal(isTime(""), false);
   });
 });

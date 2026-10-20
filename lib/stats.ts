@@ -101,6 +101,33 @@ export function personalBest(sessions: Session[], exerciseId: string): LiftRecor
   return best;
 }
 
+export interface LiftEntry {
+  date: string;
+  sets: SetEntry[];
+  /** the set that represents the day (heaviest, then most reps) */
+  top: SetEntry;
+  /** total weight moved: sum of weight × reps (reps alone for bodyweight sets) */
+  volume: number;
+}
+
+/** Every time an exercise was done, oldest first. One entry per session. */
+export function liftHistory(sessions: Session[], exerciseId: string): LiftEntry[] {
+  const out: (LiftEntry & { created: number })[] = [];
+  for (const s of sessions) {
+    const e = s.entries.find((x) => x.exerciseId === exerciseId);
+    const top = e ? topSet(e.sets) : null;
+    if (!e || !top) continue;
+    out.push({
+      date: s.date,
+      sets: e.sets,
+      top,
+      volume: e.sets.reduce((n, set) => n + (set.weight && set.weight > 0 ? set.weight * set.reps : set.reps), 0),
+      created: s.createdAt,
+    });
+  }
+  return out.sort((a, b) => (a.date === b.date ? a.created - b.created : a.date < b.date ? -1 : 1)).map((x) => ({ date: x.date, sets: x.sets, top: x.top, volume: x.volume }));
+}
+
 /** Exercises with their latest and best records, most recently done first. */
 export function liftSummaries(sessions: Session[]) {
   const ids = new Set<string>();

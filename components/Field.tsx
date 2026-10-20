@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 interface ControlProps {
   id: string;
@@ -63,6 +63,10 @@ const control =
 
 export function Input({ invalid, className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
   return <input className={`${control} ${invalid ? "border-danger" : "border-field"} ${className}`} {...props} />;
+}
+
+export function Textarea({ invalid, className = "", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }) {
+  return <textarea className={`${control} min-h-24 ${invalid ? "border-danger" : "border-field"} ${className}`} {...props} />;
 }
 
 export function Select({ invalid, className = "", ...props }: SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }) {

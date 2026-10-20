@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Banner } from "./Banner";
 import { Button } from "./Button";
+import { BackupPanel } from "./BackupPanel";
 import { ConfirmDialog } from "./Modal";
 import { DaysPicker, GoalPicker, UnitPicker } from "./Pickers";
 import { LoadingState, NeedsProfile } from "./States";
+import { ReminderPanel } from "./ReminderPanel";
 import { DAYS } from "@/lib/exercises";
 import { GOALS, planFor } from "@/lib/plans";
 import type { Goal } from "@/lib/plans";
@@ -101,15 +103,25 @@ function PlanForm({ profile, sessionCount }: { profile: Profile; sessionCount: n
         </div>
       </form>
 
+      <section aria-labelledby="reminders" className="border-t border-line pt-6">
+        <h2 id="reminders" className="font-display text-3xl font-extrabold uppercase tracking-wide">
+          Training reminders
+        </h2>
+        <p className="mb-4 mt-2 max-w-prose text-muted">The easiest habit is the one that shows up on your calendar.</p>
+        <ReminderPanel perWeek={profile.daysPerWeek} />
+      </section>
+
       <section aria-labelledby="data" className="border-t border-line pt-6">
         <h2 id="data" className="font-display text-3xl font-extrabold uppercase tracking-wide">
           Your data
         </h2>
-        <p className="mt-2 max-w-prose text-muted">
+        <p className="mb-4 mt-2 max-w-prose text-muted">
           Everything lives in this browser on this device — there&apos;s no account and nothing is sent anywhere. Clearing
-          your browser&apos;s site data will erase it.
+          your browser&apos;s site data would erase it, so keep a backup.
         </p>
-        <div className="mt-4">
+        <BackupPanel sessionCount={sessionCount} />
+        <div className="mt-8 border-t border-line pt-5">
+          <p className="mb-3 text-muted">Start completely fresh:</p>
           <Button variant="danger" onClick={() => setConfirmReset(true)}>
             Reset everything
           </Button>

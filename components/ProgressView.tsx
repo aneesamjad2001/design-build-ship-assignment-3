@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { Button, ButtonLink } from "./Button";
+import { Banner } from "./Banner";
 import { Calendar } from "./Calendar";
+import { FlashBanner } from "./FlashBanner";
 import { ConfirmDialog } from "./Modal";
 import { LoadingState, NeedsProfile } from "./States";
+import { Sparkline } from "./Sparkline";
 import { WeekBar } from "./WeekBar";
 import { daysBetween, shortDate } from "@/lib/dates";
 import { DAYS, getExercise } from "@/lib/exercises";
 import { goalLabel, planFor } from "@/lib/plans";
-import { daysInWeek, latestIsRecord, liftSummaries, totalTrainingDays, trainingDates, weeklyStreak } from "@/lib/stats";
+import { daysInWeek, latestIsRecord, liftHistory, liftSummaries, totalTrainingDays, trainingDates, weeklyStreak } from "@/lib/stats";
 import { fmtWeight } from "@/lib/storage";
 import type { Profile, Session, SetEntry } from "@/lib/storage";
-import { deleteSession, useIronlog, useToday } from "@/lib/store";
+import { deleteSession, restoreSession, useIronlog, useToday } from "@/lib/store";
 
 export function ProgressView() {
   const snap = useIronlog();
@@ -26,6 +29,7 @@ const fmtSet = (s: SetEntry, unit: string) => `${s.weight ? `${fmtWeight(s.weigh
 
 function Progress({ profile, sessions, today }: { profile: Profile; sessions: Session[]; today: string }) {
   const [toDelete, setToDelete] = useState<Session | null>(null);
+  const [undo, setUndo] = useState<Session | null>(null);
   const unit = profile.unit;
   const done = daysInWeek(sessions, today);
   const target = profile.daysPerWeek;
@@ -36,6 +40,27 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
 
   return (
     <div className="flex flex-col gap-8">
+      <FlashBanner />
+      {undo && (
+        <Banner
+          tone="info"
+          title={`${DAYS[undo.focus].label} on ${shortDate(undo.date)} deleted`}
+          action={
+            <Button
+              variant="secondary"
+              className="!min-h-11 !text-base"
+              onClick={() => {
+                restoreSession(undo);
+                setUndo(null);
+              }}
+            >
+              Undo
+            </Button>
+          }
+        >
+          It&apos;s gone from your history and personal bests — unless you undo.
+        </Banner>
+      )}
       <header>
         <h1 className="font-display text-5xl font-black uppercase leading-none tracking-wide">Progress</h1>
         <p className="mt-2 text-muted">
@@ -92,25 +117,56 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
             </h2>
             <ul className="mt-3 divide-y divide-line border-y border-line">
               {lifts.map(({ exerciseId, last, best }) => {
-                const times = sessions.filter((s) => s.entries.some((e) => e.exerciseId === exerciseId)).length;
+                const hist = liftHistory(sessions, exerciseId);
+                const times = hist.length;
                 // "New" only while it is: the latest log beat every earlier session, within the last two weeks
                 const isPR = times > 1 && latestIsRecord(sessions, exerciseId) && daysBetween(last.date, today) <= 14;
+                const weighted = hist.some((h) => (h.top.weight ?? 0) > 0);
+                const trend = hist.map((h) => (weighted ? (h.top.weight ?? 0) : h.top.reps));
+                const trendText =
+                  times > 1
+                    ? `${weighted ? `Top set weight` : "Top set reps"} went from ${fmtWeight(trend[0])} to ${fmtWeight(trend[trend.length - 1])}${weighted ? ` ${unit}` : ""} over ${times} sessions`
+                    : "";
                 return (
-                  <li key={exerciseId} className="py-3">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-                      <p className="text-lg font-semibold">
-                        {getExercise(exerciseId)?.name}{" "}
-                        {isPR && (
-                          <span className="ml-1 border border-ink px-1.5 py-0.5 align-middle font-display text-sm font-extrabold uppercase tracking-wider">
-                            New PR
-                          </span>
+                  <li key={exerciseId}>
+                    <details>
+                      <summary className="cursor-pointer py-3">
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                          <p className="text-lg font-semibold">
+                            {getExercise(exerciseId)?.name}{" "}
+                            {isPR && (
+                              <span className="ml-1 border border-ink px-1.5 py-0.5 align-middle font-display text-sm font-extrabold uppercase tracking-wider">
+                                New PR
+                              </span>
+                            )}
+                          </p>
+                          <p className="font-stencil text-2xl font-black tracking-wide">{fmtSet(best.set, unit)}</p>
+                        </div>
+                        <p className="text-sm text-muted">
+                          Best on {shortDate(best.date)} · last time {fmtSet(last.set, unit)} on {shortDate(last.date)} · {times}{" "}
+                          {times === 1 ? "session" : "sessions"}
+                        </p>
+                      </summary>
+                      <div className="pb-4">
+                        {times > 1 && (
+                          <div className="mb-3">
+                            <Sparkline values={trend} label={trendText} />
+                            <p className="mt-1 text-sm text-muted">{trendText}.</p>
+                          </div>
                         )}
-                      </p>
-                      <p className="font-stencil text-2xl font-black tracking-wide">{fmtSet(best.set, unit)}</p>
-                    </div>
-                    <p className="text-sm text-muted">
-                      Best on {shortDate(best.date)} · last time {fmtSet(last.set, unit)} on {shortDate(last.date)}
-                    </p>
+                        <ol className="flex flex-col divide-y divide-line border-y border-line">
+                          {[...hist].reverse().map((h, i) => (
+                            <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-4 py-2 text-sm">
+                              <span className="font-semibold">{shortDate(h.date)}</span>
+                              <span className="text-muted">{h.sets.map((set) => fmtSet(set, unit)).join("  ·  ")}</span>
+                              <span className="text-muted">
+                                {fmtWeight(h.volume)} {weighted ? unit : "reps"} total
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    </details>
                   </li>
                 );
               })}
@@ -147,7 +203,16 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
                             </li>
                           ))}
                         </ul>
-                        <div className="mt-3">
+                        {s.note && (
+                          <p className="mt-3 border-l-4 border-line pl-3 text-sm text-muted">
+                            <span className="font-semibold text-ink">Note: </span>
+                            {s.note}
+                          </p>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <ButtonLink href={`/log?edit=${s.id}`} variant="secondary" className="!min-h-11 !text-base">
+                            Edit session
+                          </ButtonLink>
                           <Button variant="danger" className="!min-h-11 !text-base" onClick={() => setToDelete(s)}>
                             Delete session
                           </Button>
@@ -173,7 +238,7 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
         confirmLabel="Delete"
         onCancel={() => setToDelete(null)}
         onConfirm={() => {
-          if (toDelete) deleteSession(toDelete.id);
+          if (toDelete) setUndo(deleteSession(toDelete.id));
           setToDelete(null);
         }}
       />

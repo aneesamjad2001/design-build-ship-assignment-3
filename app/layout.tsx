@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   title: { default: "Ironlog — your gym coach, saved on this device", template: "%s · Ironlog" },
   description:
     "Pick a goal, get today's workout, log your lifts, and see what to train next. No sign-up: everything stays on your device.",
+  icons: {
+    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: { capable: true, title: "Ironlog", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = { themeColor: "#0d0d0d" };

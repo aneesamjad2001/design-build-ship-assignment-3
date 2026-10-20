@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Banner } from "./Banner";
 import { Button, ButtonLink } from "./Button";
+import { FlashBanner } from "./FlashBanner";
 import { DaysPicker, GoalPicker } from "./Pickers";
 import { LoadingState, SafetyNote } from "./States";
 import { WeekBar } from "./WeekBar";
@@ -14,7 +15,8 @@ import type { Goal } from "@/lib/plans";
 import { recommend, suggestNext } from "@/lib/recommend";
 import { daysInWeek, lastSession, totalTrainingDays, weeklyStreak } from "@/lib/stats";
 import type { Profile, Session } from "@/lib/storage";
-import { setFlash, startProfile, useFlash, useIronlog, useToday } from "@/lib/store";
+import { readDraft } from "@/lib/draft";
+import { startProfile, useIronlog, useToday } from "@/lib/store";
 
 export function TodayView() {
   const snap = useIronlog();
@@ -115,7 +117,8 @@ function Today({
   persistent: boolean;
   recovered: boolean;
 }) {
-  const flash = useFlash();
+  // an unfinished workout saved as you typed (read once; Today renders only after the browser is read)
+  const [draft] = useState(() => readDraft());
 
   const rec = recommend(profile, sessions, today);
   const day = DAYS[rec.day];
@@ -133,17 +136,18 @@ function Today({
 
   return (
     <div className="flex flex-col gap-6">
-      {flash && (
+      <FlashBanner />
+      {draft && (
         <Banner
-          tone="success"
-          title={flash.title}
+          tone="info"
+          title="You have an unfinished workout"
           action={
-            <Button variant="ghost" onClick={() => setFlash(null)} aria-label="Dismiss message">
-              Dismiss
-            </Button>
+            <ButtonLink href="/log" variant="secondary" className="!min-h-11 !text-base">
+              Resume
+            </ButtonLink>
           }
         >
-          {flash.detail}
+          Saved at {new Date(draft.savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} — everything you typed is still there.
         </Banner>
       )}
       {!persistent && (

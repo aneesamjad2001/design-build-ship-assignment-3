@@ -8,6 +8,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { buildBackup } from "./backup";
 import { todayString } from "./dates";
 import {
   EMPTY_DATA,
@@ -123,9 +124,44 @@ export function addSession(s: Omit<Session, "id" | "createdAt" | "unit">): Sessi
   return session;
 }
 
-export function deleteSession(id: string) {
+/** Replace a session's contents (date, workout, sets, note). Entered in the current unit. */
+export function updateSession(id: string, patch: Pick<Session, "date" | "focus" | "entries" | "note">) {
   const d = current();
+  const unit = d.profile?.unit ?? "lb";
+  commit({
+    ...d,
+    sessions: d.sessions.map((s) => {
+      if (s.id !== id) return s;
+      const next: Session = { ...s, date: patch.date, focus: patch.focus, entries: patch.entries, unit };
+      if (patch.note?.trim()) next.note = patch.note.trim();
+      else delete next.note;
+      return next;
+    }),
+  });
+}
+
+/** Remove a session and hand back exactly what was stored, so it can be restored. */
+export function deleteSession(id: string): Session | null {
+  const d = current();
+  const removed = d.sessions.find((s) => s.id === id) ?? null;
   commit({ ...d, sessions: d.sessions.filter((s) => s.id !== id) });
+  return removed;
+}
+
+export function restoreSession(session: Session) {
+  const d = current();
+  if (d.sessions.some((s) => s.id === session.id)) return;
+  commit({ ...d, sessions: [...d.sessions, session] });
+}
+
+/** The stored data as a downloadable backup (weights in the unit each was entered in). */
+export function exportBackup(): string {
+  return buildBackup(current());
+}
+
+/** Replace everything on this device with a validated backup. */
+export function restoreFromBackup(data: Data) {
+  commit(data);
 }
 
 export function resetAll() {
@@ -169,10 +205,16 @@ export function useToday(): string {
 export interface Flash {
   title: string;
   detail?: string;
+  /** The page that should show it. */
+  path: string;
 }
 
 let flash: Flash | null = null;
 const flashListeners = new Set<() => void>();
+
+export function getFlash(): Flash | null {
+  return flash;
+}
 
 export function setFlash(f: Flash | null) {
   flash = f;

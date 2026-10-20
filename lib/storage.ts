@@ -11,6 +11,7 @@ import type { Goal } from "./plans.ts";
 export const STORAGE_KEY = "ironlog:v1";
 export const MAX_REPS = 100;
 export const MAX_WEIGHT = 1000;
+export const MAX_NOTE = 500;
 
 export type Unit = "lb" | "kg";
 
@@ -38,6 +39,8 @@ export interface Session {
   focus: DayType;
   entries: ExerciseEntry[];
   createdAt: number;
+  /** Optional free text about the session (how it felt, a tweak, an injury to watch). */
+  note?: string;
   /** The unit these weights were entered in. Saved data is never converted
    *  in place — conversion happens only when displaying, so switching units
    *  back and forth can't drift or drop anything. */
@@ -70,7 +73,7 @@ function parseSet(v: unknown): SetEntry | null {
 /** A session plus how many pieces of it had to be thrown away to make it valid. */
 function parseSession(v: unknown, fallbackUnit: Unit): { session: Session | null; dropped: number } {
   if (!isObject(v)) return { session: null, dropped: 1 };
-  const { id, date, focus, entries, createdAt, unit } = v;
+  const { id, date, focus, entries, createdAt, unit, note } = v;
   if (typeof id !== "string" || !id) return { session: null, dropped: 1 };
   if (!isDateString(date)) return { session: null, dropped: 1 };
   if (typeof focus !== "string" || !(focus in DAYS)) return { session: null, dropped: 1 };
@@ -95,6 +98,7 @@ function parseSession(v: unknown, fallbackUnit: Unit): { session: Session | null
       focus: focus as DayType,
       entries: cleaned,
       createdAt: typeof createdAt === "number" && Number.isFinite(createdAt) ? createdAt : 0,
+      ...(typeof note === "string" && note.trim() ? { note: note.slice(0, MAX_NOTE) } : {}),
       // sessions saved before units were tracked per session were kept in the profile's unit
       unit: unit === "kg" || unit === "lb" ? unit : fallbackUnit,
     },
