@@ -15,7 +15,8 @@ told what's next. Built for MPCS 51238 Assignment 3 (Patterns & Flows).
 - Every form: one column, a real label on every field, errors **next to the field**
   that say what to do next, and **keep what the person typed** on error.
 - Everything must work with a keyboard; contrast is checked, not assumed.
-- No CLAUDE.md — this file is the context file.
+- This file is the context file. `CLAUDE.md` holds only `@AGENTS.md`, because Claude Code
+  loads CLAUDE.md, not AGENTS.md, by itself. Put nothing else in CLAUDE.md.
 
 ## Product rules (from the author)
 - The person picks a **look in plain words**. Never ask them to pick muscles or

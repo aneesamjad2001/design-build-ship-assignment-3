@@ -231,6 +231,14 @@ skipped exercise brought back.
 This is an agent's feedback, not human testing: no real phone, screen reader or real
 time away.
 
+## Context file
+
+`AGENTS.md` is the project's context file (constraints, product rules, design, layout,
+gotchas). Claude Code only loads `CLAUDE.md` on its own, so the first `/context` check
+showed no memory files at all. The fix: `CLAUDE.md` is a single line, `@AGENTS.md`, which
+imports it. Everything lives in AGENTS.md; nothing else is in CLAUDE.md. `/context` then
+lists AGENTS.md as loaded.
+
 ## Known limitations
 
 - Data lives in one browser on one device (the assignment's scope). Clearing site data
