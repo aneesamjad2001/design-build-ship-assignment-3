@@ -1,0 +1,36 @@
+import { ButtonLink } from "./Button";
+
+/** Shown for the instant between page load and reading the device's storage. */
+export function LoadingState() {
+  return (
+    <div aria-busy="true" role="status" className="py-16 text-center">
+      <p className="font-display text-3xl font-extrabold uppercase tracking-widest text-muted">Loading your training…</p>
+    </div>
+  );
+}
+
+/** Screens that need a goal first never dead-end: they say why and offer the way. */
+export function NeedsProfile({ what }: { what: string }) {
+  return (
+    <section className="border border-line bg-surface p-6">
+      <h1 className="font-display text-4xl font-extrabold uppercase tracking-wide">Pick a goal first</h1>
+      <p className="mt-2 text-muted">
+        {what} Choose what you&apos;re training for and how many days a week — it takes two taps and you&apos;ll get
+        today&apos;s workout right away.
+      </p>
+      <div className="mt-5">
+        <ButtonLink href="/" variant="primary">
+          Choose my goal
+        </ButtonLink>
+      </div>
+    </section>
+  );
+}
+
+export function SafetyNote() {
+  return (
+    <p className="text-sm text-muted">
+      General training guidance, not medical advice. Start lighter than you think and stop if something hurts.
+    </p>
+  );
+}
