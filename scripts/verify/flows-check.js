@@ -213,6 +213,29 @@ async function waitUrl(pg, path, what) {
     await kctx.close();
   }
 
+  /* ---- a saved workout must not come back: opening Log again starts clean ---- */
+  {
+    const rctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const r = await rctx.newPage();
+    await r.goto(BASE + "/", { waitUntil: "networkidle" });
+    await r.getByText("Build muscle").click();
+    await r.getByRole("button", { name: "Show my first workout" }).click();
+    await r.waitForSelector("text=Log this workout");
+    await r.locator('nav[aria-label="Main"] a', { hasText: "Log" }).click();
+    await r.waitForSelector("text=Log a session");
+    await r.getByLabel(/set 1, weight/).first().fill("135");
+    await r.getByLabel(/set 1, reps/).first().fill("8");
+    await r.getByRole("button", { name: "Save session" }).click();
+    await r.waitForSelector("text=saved");
+    // a person's next move: tap Log again. Pages are client-navigated, so stale state would show here.
+    await r.locator('nav[aria-label="Main"] a', { hasText: "Log" }).click();
+    await r.waitForSelector("text=Log a session");
+    await r.waitForTimeout(500);
+    const filled = await r.evaluate(() => [...document.querySelectorAll('form input[inputmode]')].filter((i) => i.value !== "").length);
+    check(filled === 0, `stale form: ${filled} field(s) still hold values from the session that was just saved`);
+    await rctx.close();
+  }
+
   /* ---- no sideways scroll on any route, 390px ---- */
   for (const route of ["/", "/log", "/progress", "/plan"]) {
     await page.goto(BASE + route, { waitUntil: "networkidle" });
