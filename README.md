@@ -161,7 +161,7 @@ everything; the Plan page says so plainly.
 
 Next.js (App Router) + Tailwind, TypeScript. No database, accounts, backend, or
 external APIs; no extra runtime dependencies. Tests use Node's built-in runner.
-Decisions the agent proposed and the author chose are listed in
+Who decided what — the author's choices versus the agent's proposals — is recorded in
 [`docs/decisions.md`](./docs/decisions.md).
 
 ```bash

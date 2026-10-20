@@ -14,7 +14,7 @@ Who decided what, so it can be explained honestly in class.
 - **The "Iron" visual direction** (industrial, near-black, safety yellow) over a
   chalkboard or locker-room look.
 
-## The agent proposed (and the author did not object to)
+## The agent proposed (the author has not yet reviewed these in detail)
 - Recommendations as **plain rules, not AI** — required by "no external APIs",
   and it keeps the "why" explainable.
 - **Weekly (not daily) streaks**, after research showed Fitbod and Nike do the same.
