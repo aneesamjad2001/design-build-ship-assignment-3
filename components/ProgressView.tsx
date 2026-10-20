@@ -9,7 +9,7 @@ import { WeekBar } from "./WeekBar";
 import { daysBetween, shortDate } from "@/lib/dates";
 import { DAYS, getExercise } from "@/lib/exercises";
 import { goalLabel, planFor } from "@/lib/plans";
-import { daysInWeek, liftSummaries, totalTrainingDays, trainingDates, weeklyStreak } from "@/lib/stats";
+import { daysInWeek, latestIsRecord, liftSummaries, totalTrainingDays, trainingDates, weeklyStreak } from "@/lib/stats";
 import { fmtWeight } from "@/lib/storage";
 import type { Profile, Session, SetEntry } from "@/lib/storage";
 import { deleteSession, useIronlog, useToday } from "@/lib/store";
@@ -93,13 +93,8 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
             <ul className="mt-3 divide-y divide-line border-y border-line">
               {lifts.map(({ exerciseId, last, best }) => {
                 const times = sessions.filter((s) => s.entries.some((e) => e.exerciseId === exerciseId)).length;
-                // "New" only while it is: the latest log is the best, beat a baseline, and happened in the last two weeks
-                const isPR =
-                  times > 1 &&
-                  last.date === best.date &&
-                  last.set.reps === best.set.reps &&
-                  last.set.weight === best.set.weight &&
-                  daysBetween(best.date, today) <= 14;
+                // "New" only while it is: the latest log beat every earlier session, within the last two weeks
+                const isPR = times > 1 && latestIsRecord(sessions, exerciseId) && daysBetween(last.date, today) <= 14;
                 return (
                   <li key={exerciseId} className="py-3">
                     <div className="flex flex-wrap items-baseline justify-between gap-x-4">

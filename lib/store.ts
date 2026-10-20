@@ -12,9 +12,9 @@ import { todayString } from "./dates";
 import {
   EMPTY_DATA,
   STORAGE_KEY,
-  convertSessions,
   parseData,
   serialize,
+  sessionsIn,
 } from "./storage";
 import type { Data, Profile, Session } from "./storage";
 
@@ -34,6 +34,8 @@ let writeFailed = false;
 let memoryRaw: string | null = null;
 let cacheRaw: string | null | undefined;
 let cache: Snapshot = LOADING;
+/** What is actually stored (weights in the unit each session was entered in). */
+let cacheStored: Data = EMPTY_DATA;
 const listeners = new Set<() => void>();
 
 function readRaw(): string | null {
@@ -51,7 +53,10 @@ function getSnapshot(): Snapshot {
   if (raw === cacheRaw && cache.ready) return cache;
   cacheRaw = raw;
   const { data, recovered } = parseData(raw);
-  cache = { ready: true, data, recovered, persistent: !writeFailed };
+  cacheStored = data;
+  // The app reads sessions converted to the profile's unit; storage is never rewritten for that.
+  const shown = data.profile ? { ...data, sessions: sessionsIn(data.sessions, data.profile.unit) } : data;
+  cache = { ready: true, data: shown, recovered, persistent: !writeFailed };
   return cache;
 }
 
@@ -93,25 +98,27 @@ function newId(): string {
     : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const current = (): Data => getSnapshot().data;
+/** The stored data, for writing back. Never the converted view. */
+const current = (): Data => {
+  getSnapshot();
+  return cacheStored;
+};
 
 export function startProfile(p: Pick<Profile, "goal" | "daysPerWeek">) {
   const d = current();
   commit({ ...d, profile: { goal: p.goal, daysPerWeek: p.daysPerWeek, unit: d.profile?.unit ?? "lb", createdAt: d.profile?.createdAt ?? Date.now() } });
 }
 
-/** Change goal, days, or unit. Switching unit converts every saved weight. */
+/** Change goal, days, or unit. Switching unit only changes how weights are shown. */
 export function updateProfile(patch: Partial<Pick<Profile, "goal" | "daysPerWeek" | "unit">>) {
   const d = current();
   if (!d.profile) return;
-  const next: Profile = { ...d.profile, ...patch };
-  const sessions = patch.unit && patch.unit !== d.profile.unit ? convertSessions(d.sessions, d.profile.unit, patch.unit) : d.sessions;
-  commit({ ...d, profile: next, sessions });
+  commit({ ...d, profile: { ...d.profile, ...patch } });
 }
 
-export function addSession(s: Omit<Session, "id" | "createdAt">): Session {
+export function addSession(s: Omit<Session, "id" | "createdAt" | "unit">): Session {
   const d = current();
-  const session: Session = { ...s, id: newId(), createdAt: Date.now() };
+  const session: Session = { ...s, id: newId(), createdAt: Date.now(), unit: d.profile?.unit ?? "lb" };
   commit({ ...d, sessions: [...d.sessions, session] });
   return session;
 }
@@ -136,7 +143,19 @@ function subscribeToday(cb: () => void): () => void {
   const onVisible = () => document.visibilityState === "visible" && cb();
   document.addEventListener("visibilitychange", onVisible);
   window.addEventListener("focus", cb);
+  // A tab left open and in front still has to roll over at midnight.
+  let timer: ReturnType<typeof setTimeout>;
+  const schedule = () => {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+    timer = setTimeout(() => {
+      cb();
+      schedule();
+    }, midnight.getTime() - now.getTime());
+  };
+  schedule();
   return () => {
+    clearTimeout(timer);
     document.removeEventListener("visibilitychange", onVisible);
     window.removeEventListener("focus", cb);
   };

@@ -4,9 +4,9 @@ import { addDays, daysBetween, monthGrid, startOfWeek } from "./dates.ts";
 import { recommend, suggestNext } from "./recommend.ts";
 import { workoutFor, planFor, prescribe } from "./plans.ts";
 import { getExercise } from "./exercises.ts";
-import { convertWeight, parseData, serialize, EMPTY_DATA } from "./storage.ts";
+import { convertWeight, parseData, serialize, sessionsIn, EMPTY_DATA } from "./storage.ts";
 import type { Profile, Session } from "./storage.ts";
-import { daysInWeek, findNewPRs, weeklyStreak } from "./stats.ts";
+import { daysInWeek, findNewPRs, latestIsRecord, weeklyStreak } from "./stats.ts";
 import { validateSession, setKey } from "./validate.ts";
 import type { SessionForm } from "./validate.ts";
 
@@ -28,6 +28,7 @@ const sess = (date: string, focus: Session["focus"], exerciseId: string, weight:
   focus,
   entries: [{ exerciseId, sets: [{ weight, reps }] }],
   createdAt: n,
+  unit: "lb",
 });
 
 describe("dates", () => {
@@ -146,6 +147,12 @@ describe("suggestNext", () => {
     const s = suggestNext(bench, rx, [sess("2026-10-12", "push", "bench-press", 60, 10)], "kg")!;
     assert.equal(s.weight, 62.5);
   });
+  it("never sends an unloaded movement backwards at the top of the range", () => {
+    const pushUp = getExercise("push-up")!;
+    const s = suggestNext(pushUp, { sets: 4, repMin: 6, repMax: 10 }, [sess("2026-10-12", "push", "push-up", null, 10)], "lb")!;
+    assert.equal(s.reps, 10); // not reset to 6
+    assert.match(s.text, /add weight or slow the reps down/);
+  });
   it("has no suggestion the first time", () => {
     assert.equal(suggestNext(bench, rx, [], "lb"), null);
   });
@@ -172,6 +179,19 @@ describe("stats", () => {
       Array.from({ length: days }, (_, i) => sess(addDays(MON, -7 * weeksAgo + i), "full", "squat", 135, 5));
     const s = [...wk(3, 3), ...wk(1, 3)]; // week 2 missed
     assert.equal(weeklyStreak(s, 3, addDays(MON, 1)), 1);
+  });
+
+  it("only calls the latest log a record if it beats strictly earlier sessions", () => {
+    const first = sess("2026-10-10", "push", "bench-press", 135, 8);
+    const sameAgain = sess("2026-10-12", "push", "bench-press", 135, 8);
+    const heavier = sess("2026-10-14", "push", "bench-press", 140, 5);
+    assert.equal(latestIsRecord([first, sameAgain], "bench-press"), false); // a repeat is not a PR
+    assert.equal(latestIsRecord([first, sameAgain, heavier], "bench-press"), true);
+    assert.equal(latestIsRecord([first], "bench-press"), false); // a baseline is not a PR
+    // two identical sessions on the same day must not both look like records
+    const a = { ...sess(MON, "push", "bench-press", 150, 5), createdAt: 1 };
+    const b = { ...sess(MON, "push", "bench-press", 150, 5), createdAt: 2 };
+    assert.equal(latestIsRecord([first, a, b], "bench-press"), false);
   });
 
   it("flags a personal record only after a baseline exists", () => {
@@ -256,6 +276,43 @@ describe("storage", () => {
     assert.equal(recovered, true);
     assert.equal(data.sessions.length, 1);
     assert.equal(data.sessions[0].id, good.id);
+  });
+
+  it("keeps a session's original unit and only converts for display", () => {
+    const kgSession: Session = { ...sess(MON, "legs", "squat", 500, 3), unit: "kg" };
+    const shown = sessionsIn([kgSession], "lb");
+    assert.equal(shown[0].entries[0].sets[0].weight, 1102.5); // shown in lb…
+    assert.equal(kgSession.entries[0].sets[0].weight, 500); // …the original is untouched
+    // a 500 kg lift survives a save/load round trip even though 1102.5 > 1000
+    const data = { ...EMPTY_DATA, profile: profile({ unit: "lb" }), sessions: [kgSession] };
+    const back = parseData(serialize(data));
+    assert.equal(back.recovered, false);
+    assert.equal(back.data.sessions.length, 1);
+    // switching back and forth never drifts: always converted from the original
+    const lb = sessionsIn(sessionsIn([kgSession], "lb"), "kg");
+    assert.equal(lb[0].entries[0].sets[0].weight, 500);
+  });
+
+  it("reports partial corruption, not just lost sessions", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      profile: profile(),
+      sessions: [
+        { id: "x", date: MON, focus: "push", createdAt: 1, unit: "lb", entries: [{ exerciseId: "bench-press", sets: [{ weight: 100, reps: 8 }, { weight: 100, reps: 9999 }] }] },
+      ],
+    });
+    const { data, recovered } = parseData(raw);
+    assert.equal(recovered, true);
+    assert.equal(data.sessions[0].entries[0].sets.length, 1);
+  });
+
+  it("gives sessions saved before units were tracked the profile's unit", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      profile: profile({ unit: "kg" }),
+      sessions: [{ id: "old", date: MON, focus: "push", createdAt: 1, entries: [{ exerciseId: "bench-press", sets: [{ weight: 60, reps: 8 }] }] }],
+    });
+    assert.equal(parseData(raw).data.sessions[0].unit, "kg");
   });
 
   it("converts weights between units, rounded to the half", () => {

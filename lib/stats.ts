@@ -114,6 +114,18 @@ export function liftSummaries(sessions: Session[]) {
     .sort((a, b) => (a.last.date < b.last.date ? 1 : a.last.date > b.last.date ? -1 : 0));
 }
 
+/** Was the most recent log of this exercise a record, beaten against strictly
+ *  earlier sessions only? (Two identical sessions never both count.) */
+export function latestIsRecord(sessions: Session[], exerciseId: string): boolean {
+  const withIt = sessions.filter((s) => s.entries.some((e) => e.exerciseId === exerciseId));
+  if (withIt.length < 2) return false;
+  const latest = withIt.reduce((a, b) => (b.date > a.date || (b.date === a.date && b.createdAt > a.createdAt) ? b : a));
+  const prior = withIt.filter((s) => s.id !== latest.id && (s.date < latest.date || (s.date === latest.date && s.createdAt < latest.createdAt)));
+  const baseline = personalBest(prior, exerciseId);
+  const top = topSet(latest.entries.find((e) => e.exerciseId === exerciseId)!.sets);
+  return !!baseline && !!top && compareSets(top, baseline.set) > 0;
+}
+
 /**
  * Exercises where a new session beats everything logged before it. The very
  * first time an exercise is logged sets the baseline — that is not a PR.

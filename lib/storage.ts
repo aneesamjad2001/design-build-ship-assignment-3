@@ -38,6 +38,10 @@ export interface Session {
   focus: DayType;
   entries: ExerciseEntry[];
   createdAt: number;
+  /** The unit these weights were entered in. Saved data is never converted
+   *  in place — conversion happens only when displaying, so switching units
+   *  back and forth can't drift or drop anything. */
+  unit: Unit;
 }
 
 export interface Data {
@@ -63,27 +67,38 @@ function parseSet(v: unknown): SetEntry | null {
   return { weight: null, reps };
 }
 
-function parseSession(v: unknown): Session | null {
-  if (!isObject(v)) return null;
-  const { id, date, focus, entries, createdAt } = v;
-  if (typeof id !== "string" || !id) return null;
-  if (!isDateString(date)) return null;
-  if (typeof focus !== "string" || !(focus in DAYS)) return null;
-  if (!Array.isArray(entries)) return null;
+/** A session plus how many pieces of it had to be thrown away to make it valid. */
+function parseSession(v: unknown, fallbackUnit: Unit): { session: Session | null; dropped: number } {
+  if (!isObject(v)) return { session: null, dropped: 1 };
+  const { id, date, focus, entries, createdAt, unit } = v;
+  if (typeof id !== "string" || !id) return { session: null, dropped: 1 };
+  if (!isDateString(date)) return { session: null, dropped: 1 };
+  if (typeof focus !== "string" || !(focus in DAYS)) return { session: null, dropped: 1 };
+  if (!Array.isArray(entries)) return { session: null, dropped: 1 };
   const cleaned: ExerciseEntry[] = [];
+  let dropped = 0;
   for (const e of entries) {
-    if (!isObject(e) || typeof e.exerciseId !== "string" || !getExercise(e.exerciseId)) continue;
-    if (!Array.isArray(e.sets)) continue;
+    if (!isObject(e) || typeof e.exerciseId !== "string" || !getExercise(e.exerciseId) || !Array.isArray(e.sets)) {
+      dropped++;
+      continue;
+    }
     const sets = e.sets.map(parseSet).filter((s): s is SetEntry => s !== null);
+    dropped += e.sets.length - sets.length;
     if (sets.length > 0) cleaned.push({ exerciseId: e.exerciseId, sets });
+    else dropped++;
   }
-  if (cleaned.length === 0) return null;
+  if (cleaned.length === 0) return { session: null, dropped: dropped + 1 };
   return {
-    id,
-    date,
-    focus: focus as DayType,
-    entries: cleaned,
-    createdAt: typeof createdAt === "number" && Number.isFinite(createdAt) ? createdAt : 0,
+    session: {
+      id,
+      date,
+      focus: focus as DayType,
+      entries: cleaned,
+      createdAt: typeof createdAt === "number" && Number.isFinite(createdAt) ? createdAt : 0,
+      // sessions saved before units were tracked per session were kept in the profile's unit
+      unit: unit === "kg" || unit === "lb" ? unit : fallbackUnit,
+    },
+    dropped,
   };
 }
 
@@ -119,12 +134,16 @@ export function parseData(raw: string | null): Loaded {
 
   const profile = json.profile === null ? null : parseProfile(json.profile);
   const rawSessions = Array.isArray(json.sessions) ? json.sessions : [];
-  const sessions = rawSessions.map(parseSession).filter((s): s is Session => s !== null);
+  const sessions: Session[] = [];
+  let dropped = 0;
+  for (const raw of rawSessions) {
+    const r = parseSession(raw, profile?.unit ?? "lb");
+    dropped += r.dropped;
+    if (r.session) sessions.push(r.session);
+  }
 
-  const recovered =
-    (json.profile !== null && profile === null) ||
-    !Array.isArray(json.sessions) ||
-    sessions.length !== rawSessions.length;
+  // anything discarded at any level — a whole session or a single set — is reported
+  const recovered = (json.profile !== null && profile === null) || !Array.isArray(json.sessions) || dropped > 0;
 
   return { data: { version: 1, profile, sessions }, recovered };
 }
@@ -142,18 +161,24 @@ export function convertWeight(w: number, from: Unit, to: Unit): number {
   return Math.round(raw * 2) / 2;
 }
 
-export function convertSessions(sessions: Session[], from: Unit, to: Unit): Session[] {
-  if (from === to) return sessions;
-  return sessions.map((s) => ({
-    ...s,
-    entries: s.entries.map((e) => ({
-      ...e,
-      sets: e.sets.map((set) => ({
-        ...set,
-        weight: set.weight === null ? null : convertWeight(set.weight, from, to),
-      })),
-    })),
-  }));
+/** Sessions as shown in `to`. Each is converted from the unit it was entered
+ *  in, so nothing is converted twice and the saved originals stay untouched. */
+export function sessionsIn(sessions: Session[], to: Unit): Session[] {
+  return sessions.map((s) =>
+    s.unit === to
+      ? s
+      : {
+          ...s,
+          unit: to,
+          entries: s.entries.map((e) => ({
+            ...e,
+            sets: e.sets.map((set) => ({
+              ...set,
+              weight: set.weight === null ? null : convertWeight(set.weight, s.unit, to),
+            })),
+          })),
+        },
+  );
 }
 
 export function fmtWeight(n: number): string {

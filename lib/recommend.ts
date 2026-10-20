@@ -135,9 +135,11 @@ export function suggestNext(
 
   let nextWeight = weight;
   let nextReps: number;
+  const loaded = !!weight && weight > 0;
   if (reps >= rx.repMax) {
-    nextWeight = weight && weight > 0 ? weight + bump : weight;
-    nextReps = rx.repMin;
+    // unloaded movements can't "add weight", so keep the reps instead of resetting them
+    nextWeight = loaded ? weight + bump : weight;
+    nextReps = loaded ? rx.repMin : reps;
   } else if (reps < rx.repMin) {
     nextReps = rx.repMin;
   } else {
@@ -145,10 +147,11 @@ export function suggestNext(
   }
 
   const w = (x: number | null) => (x && x > 0 ? `${fmtWeight(x)} ${unit} × ` : "");
-  const bumped = reps >= rx.repMax && !!weight && weight > 0;
+  const bumped = reps >= rx.repMax && loaded;
+  const stalled = reps >= rx.repMax && !loaded;
   return {
     weight: nextWeight,
     reps: nextReps,
-    text: `Last: ${w(weight)}${reps} → try ${w(nextWeight)}${nextReps}${bumped ? " (top of the range, so add weight)" : ""}`,
+    text: `Last: ${w(weight)}${reps} → try ${w(nextWeight)}${nextReps}${bumped ? " (top of the range, so add weight)" : stalled ? " (top of the range — add weight or slow the reps down)" : ""}`,
   };
 }

@@ -145,7 +145,7 @@ async function waitUrl(pg, path, what) {
   await page.goto(BASE + "/plan", { waitUntil: "networkidle" });
   await page.getByText("kg", { exact: true }).click();
   await page.getByRole("button", { name: /Save/ }).click();
-  check((await text()).includes("converted to kg"), "plan: unit conversion message missing");
+  check((await text()).includes("now show in kg"), "plan: unit change message missing");
   await page.goto(BASE + "/progress", { waitUntil: "networkidle" });
   check((await text()).includes("61 kg × 8"), "progress: weight not converted to kg (135 lb → 61 kg)");
   // delete via confirm dialog; Escape cancels first

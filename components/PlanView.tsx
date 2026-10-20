@@ -36,7 +36,7 @@ function PlanForm({ profile, sessionCount }: { profile: Profile; sessionCount: n
     updateProfile({ goal, daysPerWeek: days, unit });
     setSaved(
       unitChanged && sessionCount > 0
-        ? `Plan updated. Your ${sessionCount} saved ${sessionCount === 1 ? "session was" : "sessions were"} converted to ${unit}.`
+        ? `Plan updated. Your saved weights now show in ${unit} (the originals are kept exactly as you entered them).`
         : "Plan updated. Today's workout now follows it.",
     );
   }

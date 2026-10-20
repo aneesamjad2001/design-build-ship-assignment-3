@@ -13,10 +13,10 @@ import type { Prescription } from "@/lib/plans";
 import { recommend, suggestNext } from "@/lib/recommend";
 import type { Suggestion } from "@/lib/recommend";
 import { findNewPRs } from "@/lib/stats";
-import { fmtWeight } from "@/lib/storage";
+import { convertWeight, fmtWeight } from "@/lib/storage";
 import type { Profile, Session } from "@/lib/storage";
 import { addSession, setFlash, useIronlog, useToday } from "@/lib/store";
-import { setKey, validateSession } from "@/lib/validate";
+import { parseWeight, setKey, validateSession } from "@/lib/validate";
 import type { FormErrors, SessionForm } from "@/lib/validate";
 
 export function LogView() {
@@ -53,6 +53,23 @@ function LogForm({ profile, sessions, today }: { profile: Profile; sessions: Ses
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+
+  // If the unit is switched in another tab while this form is open, convert what has
+  // been typed — otherwise "100" typed as lb would silently be saved as 100 kg.
+  const [formUnit, setFormUnit] = useState(profile.unit);
+  if (formUnit !== profile.unit) {
+    setFormUnit(profile.unit);
+    setForm((f) => ({
+      ...f,
+      exercises: f.exercises.map((ex) => ({
+        ...ex,
+        sets: ex.sets.map((s) => {
+          const w = parseWeight(s.weight);
+          return Number.isNaN(w) ? s : { ...s, weight: fmtWeight(convertWeight(w, formUnit, profile.unit)) };
+        }),
+      })),
+    }));
+  }
   const pendingFocus = useRef<string | null>(null);
   const unit = profile.unit;
 
