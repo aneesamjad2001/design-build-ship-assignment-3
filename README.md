@@ -237,7 +237,9 @@ time away.
 gotchas). Claude Code only loads `CLAUDE.md` on its own, so the first `/context` check
 showed no memory files at all. The fix: `CLAUDE.md` is a single line, `@AGENTS.md`, which
 imports it. Everything lives in AGENTS.md; nothing else is in CLAUDE.md. `/context` then
-lists AGENTS.md as loaded.
+lists AGENTS.md as loaded:
+
+![/context showing CLAUDE.md (16 tokens) and AGENTS.md (1.4k tokens) under Memory files](./docs/context-check.png)
 
 ## Known limitations
 
