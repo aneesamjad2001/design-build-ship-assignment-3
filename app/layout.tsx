@@ -10,7 +10,7 @@ const body = Barlow({ variable: "--font-barlow", subsets: ["latin"], weight: ["4
 export const metadata: Metadata = {
   title: { default: "Ironlog — your gym coach, saved on this device", template: "%s · Ironlog" },
   description:
-    "Pick a goal, get today's workout, log your lifts, and see what to train next. No sign-up: everything stays on your device.",
+    "Pick the body you want and get an exact workout every time you go, however long it's been. No sign-up: everything stays on your device.",
   icons: {
     icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: "/icons/apple-touch-icon.png",

@@ -1,22 +1,28 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Banner } from "./Banner";
 import { Button, ButtonLink } from "./Button";
 import { FlashBanner } from "./FlashBanner";
-import { DaysPicker, GoalPicker } from "./Pickers";
+import { LookPicker } from "./LookPicker";
+import { Segmented } from "./Segmented";
 import { LoadingState, SafetyNote } from "./States";
-import { WeekBar } from "./WeekBar";
-import { parseDate, relativeDay } from "@/lib/dates";
+import { lastWorkout, nextWorkout, recentCount, suggestedWeight } from "@/lib/adapt";
+import type { CompletedWorkout, WeightBook } from "@/lib/adapt";
+import { nowMs } from "@/lib/clock";
+import { fmtWeight } from "@/lib/data";
+import type { Profile } from "@/lib/data";
+import { daysBetween, parseDate, relativeDay } from "@/lib/dates";
 import { focusPageHeading } from "@/lib/focus";
-import { DAYS } from "@/lib/exercises";
-import { DEFAULT_DAYS, goalLabel, planFor, repRange, workoutFor } from "@/lib/plans";
-import type { Goal } from "@/lib/plans";
-import { recommend, suggestNext } from "@/lib/recommend";
-import { daysInWeek, lastSession, totalTrainingDays, weeklyStreak } from "@/lib/stats";
-import type { Profile, Session } from "@/lib/storage";
-import { readDraft } from "@/lib/draft";
-import { startProfile, useIronlog, useToday } from "@/lib/store";
+import { readInProgress, writeInProgress } from "@/lib/inprogress";
+import type { InProgress } from "@/lib/inprogress";
+import { getExercise, measureLabel } from "@/lib/library";
+import { getLook } from "@/lib/looks";
+import type { LookId } from "@/lib/looks";
+import { chooseLook, setTime, useIronlog, useToday } from "@/lib/store";
+import { TIME_OPTIONS, WORKOUT_KEYS, buildWorkout, workoutTitle } from "@/lib/workouts";
+import type { Feeling, TimeOption } from "@/lib/workouts";
 
 export function TodayView() {
   const snap = useIronlog();
@@ -26,7 +32,9 @@ export function TodayView() {
   return (
     <Today
       profile={snap.data.profile}
-      sessions={snap.data.sessions}
+      workouts={snap.data.workouts}
+      weights={snap.data.weights}
+      lastCheckin={snap.data.checkins.reduce((m, c) => (c.date > m ? c.date : m), "")}
       today={today}
       persistent={snap.persistent}
       recovered={snap.recovered}
@@ -35,63 +43,66 @@ export function TodayView() {
 }
 
 /* ------------------------------------------------------------------ */
-/* First visit: two taps from a cold start to a real workout.          */
+/* First visit: one pick takes a cold start to a real plan.            */
 /* ------------------------------------------------------------------ */
 
+const STEPS = [
+  ["Pick a look", "Say what kind of body you're aiming for, in plain words."],
+  ["Get today's workout", "Exact exercises, how to do each one, and where to start the weights."],
+  ["Come back whenever", "It remembers what you did and tells you what's next. No schedule to keep."],
+];
+
 function Onboarding() {
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [days, setDays] = useState(DEFAULT_DAYS);
+  const [look, setLook] = useState<LookId | null>(null);
   const [error, setError] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!goal) {
-      setError("Pick a goal so we can build your first workout.");
-      // keep the person where the problem is
-      formRef.current?.querySelector<HTMLInputElement>('input[name="goal"]')?.focus();
+    if (!look) {
+      setError("Pick the look you're aiming for so we can build your plan.");
+      formRef.current?.querySelector<HTMLInputElement>('input[name="look"]')?.focus();
       return;
     }
-    startProfile({ goal, daysPerWeek: days });
+    chooseLook(look);
     focusPageHeading();
   }
-
-  const split = goal ? planFor(goal, days) : null;
 
   return (
     <div className="flex flex-col gap-8">
       <header>
         <p className="font-display text-xl font-bold uppercase tracking-widest text-muted">Welcome to Ironlog</p>
-        <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide sm:text-6xl">
-          Your gym coach, in your pocket
-        </h1>
+        <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide sm:text-6xl">Never walk into the gym without a plan</h1>
         <p className="mt-3 max-w-prose text-lg text-muted">
-          Tell us your goal and how often you can train. You&apos;ll get today&apos;s workout in one tap — no sign-up,
-          no tour. Everything stays on this device.
+          Tell us the body you want. Ironlog builds your workouts and, every time you show up, tells you exactly what to do next — however long it&apos;s
+          been. No sign-up; it saves on this device.
         </p>
       </header>
 
-      <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-8">
-        <GoalPicker
-          value={goal}
-          onChange={(g) => {
-            setGoal(g);
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {STEPS.map(([title, text], i) => (
+          <li key={title} className="border border-line bg-surface p-4">
+            <span className="font-stencil text-3xl font-black text-muted" aria-hidden>
+              {i + 1}
+            </span>
+            <p className="font-display text-xl font-extrabold uppercase tracking-wide">{title}</p>
+            <p className="mt-1 text-sm text-muted">{text}</p>
+          </li>
+        ))}
+      </ol>
+
+      <form ref={formRef} onSubmit={submit} noValidate className="flex flex-col gap-6">
+        <LookPicker
+          value={look}
+          onChange={(id) => {
+            setLook(id);
             setError(undefined);
           }}
           error={error}
         />
-        <DaysPicker value={days} onChange={setDays} />
-
-        {split && (
-          <p className="border-l-4 border-line pl-4 text-muted" aria-live="polite">
-            <span className="font-semibold text-ink">Your week:</span>{" "}
-            {split.map((d) => DAYS[d].label).join(" → ")}
-          </p>
-        )}
-
         <div className="flex flex-col gap-3">
           <Button type="submit" variant="primary" className="w-full sm:w-auto sm:self-start">
-            Show my first workout
+            Show my plan
           </Button>
           <SafetyNote />
         </div>
@@ -101,55 +112,63 @@ function Onboarding() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Today: the reason to come back.                                      */
+/* Today: what to do next, and why.                                     */
 /* ------------------------------------------------------------------ */
 
 function Today({
   profile,
-  sessions,
+  workouts,
+  weights,
+  lastCheckin,
   today,
   persistent,
   recovered,
 }: {
   profile: Profile;
-  sessions: Session[];
+  workouts: CompletedWorkout[];
+  weights: WeightBook;
+  lastCheckin: string;
   today: string;
   persistent: boolean;
   recovered: boolean;
 }) {
-  // an unfinished workout saved as you typed (read once; Today renders only after the browser is read)
-  const [draft] = useState(() => readDraft());
+  const router = useRouter();
+  const look = getLook(profile.lookId)!;
+  const next = nextWorkout(workouts, today);
+  const [feeling, setFeeling] = useState<Feeling>("normal");
+  // an unfinished workout saved as you go. Today only renders after the browser has been read, so this never runs on the server.
+  const [draft] = useState(() => readInProgress());
 
-  const rec = recommend(profile, sessions, today);
-  const day = DAYS[rec.day];
-  const planned = workoutFor(profile.goal, rec.day);
-  const done = daysInWeek(sessions, today);
-  const target = profile.daysPerWeek;
-  const streak = weeklyStreak(sessions, target, today);
-  const total = totalTrainingDays(sessions);
-  const last = lastSession(sessions);
-  const firstTime = sessions.length === 0;
-
-  const eyebrow =
-    rec.status === "trained-today" ? "Done for today — next up" : rec.status === "rest-advised" ? "Recovery day suggested" : "Today's workout";
+  const ctx = { intro: next.isFirst, daysAway: next.daysAway, feeling, makeUps: next.makeUps };
+  const planned = buildWorkout(look, next.key, profile.time, ctx);
+  const minutes = Object.fromEntries(TIME_OPTIONS.map((t) => [t, buildWorkout(look, next.key, t, ctx).minutes])) as Record<TimeOption, number>;
   const dateLine = parseDate(today).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const last = lastWorkout(workouts);
+  const lastCount = recentCount(workouts, today, 28);
+  const checkinDue = lastCheckin !== "" && daysBetween(lastCheckin, today) >= 28;
+
+  function start() {
+    const w: InProgress = {
+      startedAt: nowMs(),
+      unit: profile.unit,
+      feeling,
+      planned,
+      index: 0,
+      progress: Object.fromEntries(
+        planned.exercises.map((p) => {
+          const s = suggestedWeight(p.exerciseId, weights, next.daysAway, profile.unit);
+          return [p.exerciseId, { setsDone: 0, weight: s != null ? fmtWeight(s) : "" }];
+        }),
+      ),
+      note: "",
+    };
+    writeInProgress(w);
+    router.push("/workout");
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <FlashBanner />
-      {draft && (
-        <Banner
-          tone="info"
-          title="You have an unfinished workout"
-          action={
-            <ButtonLink href="/log" variant="secondary" className="!min-h-11 !text-base">
-              Resume
-            </ButtonLink>
-          }
-        >
-          Saved at {new Date(draft.savedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} — everything you typed is still there.
-        </Banner>
-      )}
       {!persistent && (
         <Banner tone="warning" title="Your browser is blocking storage">
           Your workouts will be lost when you close this tab. Turn off private browsing to keep them.
@@ -160,62 +179,107 @@ function Today({
           We kept everything we could. Anything unreadable was skipped.
         </Banner>
       )}
+      {draft && (
+        <Banner tone="info" title="You have a workout in progress">
+          {workoutTitle(draft.planned.key)}, started at {new Date(draft.startedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.
+          Your place is saved.
+        </Banner>
+      )}
 
       <header>
-        <p className="font-display text-xl font-bold uppercase tracking-widest text-muted">
-          {firstTime ? "Your first workout is ready" : dateLine}
-        </p>
+        <p className="font-display text-xl font-bold uppercase tracking-widest text-muted">{next.isFirst ? "Your plan is ready" : dateLine}</p>
         <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide sm:text-6xl">
-          {firstTime ? <>Let&apos;s get started</> : last?.date === today ? <>Nice work today</> : <>Welcome back</>}
+          {next.isFirst ? "Your first workout" : "Welcome back"}
         </h1>
         <p className="mt-2 text-lg text-muted">
-          {last
-            ? `Last session: ${DAYS[last.focus].label.toLowerCase()}, ${relativeDay(last.date, today)}.`
-            : `${profile.daysPerWeek} days a week · ${goalLabel(profile.goal)}.`}
+          {last ? `Last workout: ${workoutTitle(last.key)}, ${relativeDay(last.date, today)}.` : `Built for the ${look.name.toLowerCase()} look.`}
         </p>
       </header>
 
-      <section aria-labelledby="workout-heading" className="border-2 border-ink bg-surface p-5">
-        <p className="font-display text-lg font-bold uppercase tracking-widest text-muted">{eyebrow}</p>
-        <h2 id="workout-heading" className="font-display text-5xl font-black uppercase leading-none tracking-wide">
-          {day.label}
+      {planned.notes.map((n) => (
+        <Banner key={n} tone="info" title={n} />
+      ))}
+      {checkinDue && (
+        <Banner
+          tone="info"
+          title="Time for a monthly check-in?"
+          action={
+            <ButtonLink href="/checkin" variant="secondary" className="!min-h-11 !text-base">
+              Add one
+            </ButtonLink>
+          }
+        >
+          Optional — a minute to note your numbers so you can see the trend.
+        </Banner>
+      )}
+
+      <section aria-labelledby="next-heading" className="border-2 border-ink bg-surface p-5">
+        <p className="font-display text-lg font-bold uppercase tracking-widest text-muted">{next.repeat ? "Finish this one" : "Next up"}</p>
+        <h2 id="next-heading" className="font-display text-5xl font-black uppercase leading-none tracking-wide">
+          {workoutTitle(next.key)}
         </h2>
         <p className="mt-2 text-muted">
           <span className="font-semibold text-ink">Why: </span>
-          {rec.reason}
+          {next.reason}
         </p>
 
-        <div className="mt-4">
-          {rec.status === "ready" && (
-            <ButtonLink href="/log" variant="primary" className="w-full sm:w-auto">
-              Log this workout
-            </ButtonLink>
-          )}
-          {rec.status === "trained-today" && (
-            <ButtonLink href="/log" variant="secondary" className="w-full sm:w-auto">
-              Log another session
-            </ButtonLink>
-          )}
-          {rec.status === "rest-advised" && (
-            <ButtonLink href="/log" variant="secondary" className="w-full sm:w-auto">
-              Train anyway
-            </ButtonLink>
+        <div className="mt-5 flex flex-col gap-4">
+          <Segmented<TimeOption>
+            legend="How long do you have?"
+            name="time"
+            value={profile.time}
+            onChange={(t) => setTime(t)}
+            options={[
+              { value: "short", label: "Short", sub: `about ${minutes.short} min` },
+              { value: "standard", label: "Standard", sub: `about ${minutes.standard} min` },
+              { value: "long", label: "Long", sub: `about ${minutes.long} min` },
+            ]}
+          />
+          <Segmented<Feeling>
+            legend="How are you feeling?"
+            name="feeling"
+            value={feeling}
+            onChange={setFeeling}
+            options={[
+              { value: "fresh", label: "Fresh" },
+              { value: "normal", label: "Normal" },
+              { value: "tired", label: "Tired" },
+            ]}
+            hint={feeling === "tired" ? "Got it — a shorter, lighter version." : "Tired? Say so and we'll make it lighter."}
+          />
+        </div>
+
+        <div className="mt-5">
+          {draft ? (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <ButtonLink href="/workout" variant="primary" className="w-full sm:w-auto">
+                Resume workout
+              </ButtonLink>
+              <Button variant="secondary" onClick={start} className="w-full sm:w-auto">
+                Start a new one instead
+              </Button>
+            </div>
+          ) : (
+            <Button variant="primary" onClick={start} className="w-full sm:w-auto">
+              Start workout
+            </Button>
           )}
         </div>
 
         <ol className="mt-5 divide-y divide-line border-y border-line">
-          {planned.map(({ exercise, prescription }) => {
-            const sug = suggestNext(exercise, prescription, sessions, profile.unit);
+          {planned.exercises.map((p) => {
+            const e = getExercise(p.exerciseId)!;
+            const w = suggestedWeight(p.exerciseId, weights, next.daysAway, profile.unit);
+            const sub = p.note ?? (w != null ? `Start with ${fmtWeight(w)} ${profile.unit}` : e.weighted ? "We'll help you find a starting weight" : "Just your bodyweight");
             return (
-              <li key={exercise.id} className="flex items-baseline justify-between gap-4 py-3">
+              <li key={p.exerciseId} className="flex items-baseline justify-between gap-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-lg font-semibold">{exercise.name}</p>
-                  <p className="text-sm text-muted">
-                    {sug ? sug.text.replace("Last:", "Last time:") : `Start light — pick a weight you can lift ${prescription.repMax} clean times.`}
-                  </p>
+                  <p className="text-lg font-semibold">{e.name}</p>
+                  <p className="text-sm text-muted">{sub}</p>
                 </div>
                 <p className="flex-none font-stencil text-2xl font-black tracking-wide">
-                  {prescription.sets} × {repRange(prescription)}
+                  {p.sets > 1 ? `${p.sets} × ` : ""}
+                  {p.min === p.max ? p.min : `${p.min}–${p.max}`} <span className="text-base font-bold text-muted">{measureLabel(e.measure)}</span>
                 </p>
               </li>
             );
@@ -223,42 +287,42 @@ function Today({
         </ol>
       </section>
 
-      {!firstTime && (
-        <section aria-labelledby="week-heading" className="border border-line bg-surface p-5">
-          <h2 id="week-heading" className="font-display text-3xl font-extrabold uppercase tracking-wide">
-            This week
-          </h2>
-          <WeekBar done={done} target={target} />
-          <p className="mt-2 text-center text-lg font-semibold">
-            {done >= target ? "Weekly target hit — strong work." : `${done} of ${target} sessions`}
+      <section aria-labelledby="plan-heading" className="border border-line bg-surface p-5">
+        <h2 id="plan-heading" className="font-display text-3xl font-extrabold uppercase tracking-wide">
+          Your plan
+        </h2>
+        <p className="mt-1 text-muted">
+          Built for <span className="font-semibold text-ink">{look.name}</span>. Three full-body workouts that repeat — do the next one whenever you go.
+        </p>
+        <ol className="mt-4 grid grid-cols-3 gap-2">
+          {WORKOUT_KEYS.map((k) => (
+            <li
+              key={k}
+              aria-current={k === next.key ? "step" : undefined}
+              className={`border-2 px-2 py-3 text-center ${k === next.key ? "border-ink bg-ink text-accent-ink" : "border-line"}`}
+            >
+              <span className="block font-display text-2xl font-extrabold uppercase tracking-wide">Workout {k}</span>
+              <span className={`block text-sm ${k === next.key ? "text-[#333333]" : "text-muted"}`}>{k === next.key ? "Next" : last?.key === k ? "Last done" : " "}</span>
+            </li>
+          ))}
+        </ol>
+        {workouts.length > 0 && (
+          <p className="mt-4 text-sm text-muted">
+            {lastCount} {lastCount === 1 ? "workout" : "workouts"} in the last four weeks. Even one a week keeps what you&apos;ve built.
           </p>
-          <dl className="mt-4 grid grid-cols-2 gap-px bg-line text-center">
-            <div className="bg-surface px-2 py-3">
-              <dt className="text-sm text-muted">Week streak</dt>
-              <dd className="font-stencil text-4xl font-black leading-none">{streak}</dd>
-            </div>
-            <div className="bg-surface px-2 py-3">
-              <dt className="text-sm text-muted">Days at the gym</dt>
-              <dd className="font-stencil text-4xl font-black leading-none">{total}</dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-center text-sm text-muted">
-            A week counts when you train on {target} different days
-            {streak === 0 ? " — hit it to start a streak." : "."}
-          </p>
-          <div className="mt-3 text-center">
-            <ButtonLink href="/progress" variant="ghost">
-              See my progress →
-            </ButtonLink>
-          </div>
-        </section>
-      )}
+        )}
+        <div className="mt-3 flex flex-wrap gap-x-2">
+          <ButtonLink href="/progress" variant="ghost">
+            See my progress →
+          </ButtonLink>
+          <ButtonLink href="/plan" variant="ghost">
+            Change my look →
+          </ButtonLink>
+        </div>
+      </section>
 
       <footer className="flex flex-col gap-2">
-        <p className="text-sm text-muted">
-          <span aria-hidden>● </span>Saved on this device. Train on a different day than planned? No problem — each
-          visit picks the workout whose muscles have rested longest. Change your goal or days anytime in Plan.
-        </p>
+        <p className="text-sm text-muted">Saved on this device. Miss a week? Nothing to catch up on — just do the next workout.</p>
         <SafetyNote />
       </footer>
     </div>

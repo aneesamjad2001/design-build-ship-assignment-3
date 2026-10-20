@@ -13,14 +13,13 @@ export function LoadingState() {
 export function NeedsProfile({ what }: { what: string }) {
   return (
     <section className="border border-line bg-surface p-6">
-      <h1 className="font-display text-4xl font-extrabold uppercase tracking-wide">Pick a goal first</h1>
+      <h1 className="font-display text-4xl font-extrabold uppercase tracking-wide">Pick a look first</h1>
       <p className="mt-2 text-muted">
-        {what} Choose what you&apos;re training for and how many days a week — it takes two taps and you&apos;ll get
-        today&apos;s workout right away.
+        {what} Pick the kind of body you&apos;re aiming for. It takes one tap and you&apos;ll get today&apos;s workout right away.
       </p>
       <div className="mt-5">
         <ButtonLink href="/" variant="primary">
-          Choose my goal
+          Choose my look
         </ButtonLink>
       </div>
     </section>

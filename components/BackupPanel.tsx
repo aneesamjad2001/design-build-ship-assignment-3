@@ -6,7 +6,7 @@ import { Button } from "./Button";
 import { Field } from "./Field";
 import { ConfirmDialog } from "./Modal";
 import { MAX_BACKUP_BYTES, backupFileName, describeBackup, readBackup } from "@/lib/backup";
-import type { Data } from "@/lib/storage";
+import type { Data } from "@/lib/data";
 import { exportBackup, restoreFromBackup } from "@/lib/store";
 
 /** Months of training live only in this browser, so give people a way to keep a copy. */
@@ -26,7 +26,7 @@ export function BackupPanel({ sessionCount }: { sessionCount: number }) {
     a.remove();
     URL.revokeObjectURL(url);
     setError(undefined);
-    setDone(`Backup downloaded — your plan and ${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}. Keep the file somewhere safe.`);
+    setDone(`Backup downloaded — your plan and ${sessionCount} ${sessionCount === 1 ? "workout" : "workouts"}. Keep the file somewhere safe.`);
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -53,7 +53,7 @@ export function BackupPanel({ sessionCount }: { sessionCount: number }) {
         <Button variant="secondary" onClick={download}>
           Download a backup
         </Button>
-        <p className="mt-2 text-sm text-muted">A single .json file with your plan, every session, and your notes.</p>
+        <p className="mt-2 text-sm text-muted">A single .json file with your plan, every workout, your remembered weights and check-ins.</p>
       </div>
 
       <Field id="backup-file" label="Restore from a backup" hint="Choose a .json file you downloaded from Ironlog. You'll see what's in it before anything changes." error={error}>
@@ -75,7 +75,7 @@ export function BackupPanel({ sessionCount }: { sessionCount: number }) {
         title="Restore this backup?"
         body={
           pending
-            ? `${pending.label} This replaces what's on this device now (${sessionCount} ${sessionCount === 1 ? "session" : "sessions"}).${pending.recovered ? " Some unreadable parts of the file will be skipped." : ""}`
+            ? `${pending.label} This replaces what's on this device now (${sessionCount} ${sessionCount === 1 ? "workout" : "workouts"}).${pending.recovered ? " Some unreadable parts of the file will be skipped." : ""}`
             : ""
         }
         confirmLabel="Restore backup"
