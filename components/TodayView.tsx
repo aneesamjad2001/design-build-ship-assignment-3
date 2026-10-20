@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Banner } from "./Banner";
 import { Button, ButtonLink } from "./Button";
 import { DaysPicker, GoalPicker } from "./Pickers";
@@ -116,7 +116,6 @@ function Today({
   recovered: boolean;
 }) {
   const flash = useFlash();
-  useEffect(() => () => setFlash(null), []);
 
   const rec = recommend(profile, sessions, today);
   const day = DAYS[rec.day];

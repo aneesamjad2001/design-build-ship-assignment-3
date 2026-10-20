@@ -6,6 +6,17 @@ const { chromium } = require("playwright");
 const BASE = process.env.BASE || "http://localhost:3000";
 const problems = [];
 const check = (cond, msg) => { if (!cond) problems.push(msg); };
+// Wait for client-side navigation without throwing: report where we ended up instead.
+async function waitUrl(pg, path, what) {
+  try {
+    await pg.waitForFunction((u) => location.href === u, BASE + path, { timeout: 15000 });
+    return true;
+  } catch {
+    const body = ((await pg.locator("body").textContent()) || "").replace(/\s+/g, " ").slice(0, 160);
+    problems.push(`${what}: expected ${BASE + path} but at ${pg.url()} — page says: "${body}"`);
+    return false;
+  }
+}
 
 (async () => {
   const browser = await chromium.launch();
@@ -45,8 +56,10 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
   check(!t.includes("Days at the gym"), "first workout: stats card should be hidden before any session");
 
   // after onboarding swaps to Today, focus lands on the new heading, at the top
-  await page.waitForTimeout(150);
-  check(await page.evaluate(() => document.activeElement?.tagName === "H1" && scrollY === 0), "onboarding: focus/scroll did not reset to the new heading");
+  const landed0 = await page
+    .waitForFunction(() => document.activeElement?.tagName === "H1" && scrollY === 0, null, { timeout: 4000 })
+    .then(() => true, () => false);
+  check(landed0, "onboarding: focus/scroll did not reset to the new heading");
 
   /* ---- persistence across reload ---- */
   await page.reload({ waitUntil: "networkidle" });
@@ -56,9 +69,12 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
 
   /* ---- navigation moves focus to the new page's heading ---- */
   await page.locator('nav[aria-label="Main"] a', { hasText: "Progress" }).click();
-  await page.waitForURL(BASE + "/progress");
-  await page.waitForTimeout(150);
-  check(await page.evaluate(() => document.activeElement?.tagName === "H1" && scrollY === 0), "navigation: focus did not move to the new page's heading");
+  await waitUrl(page, "/progress", "nav to Progress");
+  // the heading takes a few frames to render on a cold route, so wait for it rather than guess a delay
+  const landed = await page
+    .waitForFunction(() => document.activeElement?.tagName === "H1" && document.activeElement.textContent === "Progress" && scrollY === 0, null, { timeout: 4000 })
+    .then(() => true, () => false);
+  check(landed, "navigation: focus did not move to the new page's heading");
 
   /* ---- THE FORM ---- */
   await page.goto(BASE + "/log", { waitUntil: "networkidle" });
@@ -92,7 +108,7 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
   const today = await page.evaluate(() => new Date().toLocaleDateString("en-CA"));
   await page.getByLabel("Date").fill(today);
   await page.getByRole("button", { name: "Save session" }).click();
-  await page.waitForURL(BASE + "/");
+  await waitUrl(page, "/", "after save/reset");
   t = await text();
   check(t.includes("Upper body saved"), "save: success message missing on Today");
   check(t.includes("1 of 4 sessions"), "save: week progress not updated");
@@ -148,7 +164,7 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
   await page.goto(BASE + "/plan", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Reset everything" }).click();
   await page.getByRole("button", { name: "Erase everything" }).click();
-  await page.waitForURL(BASE + "/");
+  await waitUrl(page, "/", "after save/reset");
   check((await text()).includes("What are you training for?"), "reset: did not return to first visit");
   check((await page.evaluate(() => localStorage.getItem("ironlog:v1"))) === null, "reset: storage not cleared");
 
@@ -183,12 +199,12 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
     // go to Log with the nav links
     check(await tabTo(() => document.activeElement?.textContent === "Log this workout"), "keyboard: cannot reach the primary action");
     await k.keyboard.press("Enter");
-    await k.waitForURL(BASE + "/log");
+    await waitUrl(k, "/log", "keyboard: Enter on the primary action");
     check(await tabTo(() => document.activeElement?.id === "ex0-set0-reps", 80), "keyboard: cannot Tab to the first reps field");
     await k.keyboard.type("5");
     check(await tabTo(() => document.activeElement?.textContent?.includes("Save session"), 120), "keyboard: cannot Tab to Save session");
     await k.keyboard.press("Enter");
-    await k.waitForURL(BASE + "/");
+    await waitUrl(k, "/", "keyboard: saving with Enter");
     check((await k.locator("body").textContent()).includes("saved"), "keyboard: saving with Enter did not work");
     // visible focus ring: the focused control shows an outline
     await k.keyboard.press("Tab");

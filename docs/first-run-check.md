@@ -41,6 +41,26 @@ other browsers, or real devices.
 | 8 | Plan: button label flips between "Save plan"/"Save changes"; message below the button; rotation preview "didn't change" when switching goal | low | Label/placement yes. The preview is **not a bug**: Build muscle and Get stronger have the *same* 4-day rotation (Upper·Lower·Upper·Lower) — they differ in sets and reps, which the preview didn't show | **Fixed:** constant "Save changes", message above the button, and the goal's rep scheme now shown under the rotation. |
 | — | "Reset everything" may not confirm | — | **Wrong** — it opens a confirm dialog (an existing test covers it) | No change. |
 
+## Bugs my own fixes introduced — caught by re-running the checks
+
+Re-running the browser suite after the fixes found two real problems in the fixes
+themselves (one passed on the deployed site but failed on the dev server, which
+is how it surfaced):
+
+1. **The "saved" message vanished in development.** It was cleared in an unmount
+   cleanup, and React's dev-mode StrictMode runs that cleanup right after mounting.
+   The deployed site happened to work, but depending on that was fragile. It is now
+   cleared when you navigate to any page other than Today.
+2. **The new focus-to-heading code could misfire.** (a) It could steal focus from a
+   field you had already started using, if the heading rendered late. (b) After a
+   route change it compared against a heading that was already the new page's, so a
+   nav click never moved focus. It now never takes focus once you're inside the
+   page, and treats route changes and same-page swaps (onboarding to Today)
+   differently.
+
+The browser test script also stopped throwing on slow navigations and now reports
+where it actually ended up, and waits for focus to land instead of guessing a delay.
+
 ## Questions a new user would still have (noted, not built)
 
 Export/move data to another phone; swapping an exercise you can't do; why these
