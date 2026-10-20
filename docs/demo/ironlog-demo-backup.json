@@ -1,0 +1,55 @@
+{
+  "app": "ironlog",
+  "exportedAt": "2026-10-20T21:00:00.000Z",
+  "version": 2,
+  "profile": { "lookId": "broad-muscular", "time": "standard", "unit": "lb", "createdAt": 1756000000000 },
+  "workouts": [
+    { "id": "demo-1", "date": "2026-08-25", "key": "A", "unit": "lb", "createdAt": 1756150000000,
+      "exercises": [
+        { "exerciseId": "goblet-squat", "setsDone": 2, "setsPlanned": 2, "weight": 30, "feedback": "easy" },
+        { "exerciseId": "dumbbell-bench-press", "setsDone": 2, "setsPlanned": 2, "weight": 25, "feedback": "right" },
+        { "exerciseId": "seated-cable-row", "setsDone": 2, "setsPlanned": 2, "weight": 60, "feedback": "right" },
+        { "exerciseId": "romanian-deadlift", "setsDone": 2, "setsPlanned": 2, "weight": 40, "feedback": "hard" },
+        { "exerciseId": "plank", "setsDone": 2, "setsPlanned": 2, "weight": null }
+      ] },
+    { "id": "demo-2", "date": "2026-09-01", "key": "B", "unit": "lb", "createdAt": 1756750000000,
+      "exercises": [
+        { "exerciseId": "hip-thrust", "setsDone": 3, "setsPlanned": 3, "weight": 95, "feedback": "right" },
+        { "exerciseId": "dumbbell-shoulder-press", "setsDone": 4, "setsPlanned": 4, "weight": 20, "feedback": "easy" },
+        { "exerciseId": "lat-pulldown", "setsDone": 4, "setsPlanned": 4, "weight": 70, "feedback": "right" },
+        { "exerciseId": "split-squat", "setsDone": 3, "setsPlanned": 3, "weight": 15, "feedback": "right" },
+        { "exerciseId": "dead-bug", "setsDone": 3, "setsPlanned": 3, "weight": null },
+        { "exerciseId": "lateral-raise", "setsDone": 3, "setsPlanned": 3, "weight": 10, "feedback": "easy" }
+      ] },
+    { "id": "demo-3", "date": "2026-09-15", "key": "C", "unit": "lb", "createdAt": 1757950000000, "note": "Leg press was busy, did it last.",
+      "exercises": [
+        { "exerciseId": "leg-press", "setsDone": 3, "setsPlanned": 3, "weight": 140, "feedback": "easy" },
+        { "exerciseId": "incline-dumbbell-press", "setsDone": 4, "setsPlanned": 4, "weight": 25, "feedback": "right" },
+        { "exerciseId": "one-arm-dumbbell-row", "setsDone": 4, "setsPlanned": 4, "weight": 35, "feedback": "right" },
+        { "exerciseId": "leg-curl", "setsDone": 3, "setsPlanned": 3, "weight": 50, "feedback": "right" },
+        { "exerciseId": "hanging-knee-raise", "setsDone": 0, "setsPlanned": 3, "weight": null, "skipped": true },
+        { "exerciseId": "face-pull", "setsDone": 3, "setsPlanned": 3, "weight": 30, "feedback": "right" }
+      ] }
+  ],
+  "weights": {
+    "goblet-squat": { "weight": 35, "unit": "lb", "rightStreak": 0, "updatedAt": "2026-08-25" },
+    "dumbbell-bench-press": { "weight": 25, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-08-25" },
+    "seated-cable-row": { "weight": 60, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-08-25" },
+    "romanian-deadlift": { "weight": 35, "unit": "lb", "rightStreak": 0, "updatedAt": "2026-08-25" },
+    "hip-thrust": { "weight": 95, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-01" },
+    "dumbbell-shoulder-press": { "weight": 25, "unit": "lb", "rightStreak": 0, "updatedAt": "2026-09-01" },
+    "lat-pulldown": { "weight": 70, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-01" },
+    "split-squat": { "weight": 15, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-01" },
+    "lateral-raise": { "weight": 12.5, "unit": "lb", "rightStreak": 0, "updatedAt": "2026-09-01" },
+    "leg-press": { "weight": 150, "unit": "lb", "rightStreak": 0, "updatedAt": "2026-09-15" },
+    "incline-dumbbell-press": { "weight": 25, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-15" },
+    "one-arm-dumbbell-row": { "weight": 35, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-15" },
+    "leg-curl": { "weight": 50, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-15" },
+    "face-pull": { "weight": 30, "unit": "lb", "rightStreak": 1, "updatedAt": "2026-09-15" }
+  },
+  "checkins": [
+    { "id": "demo-c1", "date": "2026-08-25", "unit": "lb", "weight": 172, "waist": 33.5, "chest": 38, "createdAt": 1756150000001 },
+    { "id": "demo-c2", "date": "2026-09-22", "unit": "lb", "weight": 174, "waist": 33.5, "chest": 39, "createdAt": 1758550000001 }
+  ],
+  "nutrition": null
+}
