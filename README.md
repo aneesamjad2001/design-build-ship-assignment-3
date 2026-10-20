@@ -8,7 +8,8 @@ Built for MPCS 51238 *Design, Build, Ship* — Assignment 3, Patterns & Flows.
 Next.js + Tailwind, no database, no accounts, no external APIs. Everything is
 saved in the browser with `localStorage`.
 
-- **Live:** _add the Vercel URL here_
+- **Live:** https://design-build-ship-assignment-3.vercel.app
+- **Repository:** https://github.com/aneesamjad2001/design-build-ship-assignment-3
 - **Who it's for:** someone who lifts a few days a week and keeps losing track of
   what they did last time and what they should do next.
 - **What brings them back:** a workout that is already chosen for them, *with a
