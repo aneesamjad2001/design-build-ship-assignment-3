@@ -51,7 +51,7 @@ function Progress({ profile, sessions, today }: { profile: Profile; sessions: Se
         <p className="mt-2 text-center text-lg font-semibold">
           {done} of {target} sessions · {streak > 0 ? `${streak}-week streak` : "no streak yet"}
         </p>
-        <p className="mt-1 text-center text-sm text-muted">{totalTrainingDays(sessions)} days at the gym in total</p>
+        <p className="mt-1 text-center text-sm text-muted">{totalTrainingDays(sessions)} {totalTrainingDays(sessions) === 1 ? "day" : "days"} at the gym in total</p>
       </section>
 
       {sessions.length === 0 ? (

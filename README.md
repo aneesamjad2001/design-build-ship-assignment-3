@@ -178,8 +178,32 @@ Browser checks (Playwright, not part of the build) live in
 
 ## First-run check
 
-_Added after deployment — the agent's usability feedback as a brand-new user, and
-what changed because of it._
+After deploying, an agent played a brand-new user on the live site — phone and
+desktop, told not to read the code — with the goal *"pick a goal, get a workout,
+log my first session, then come back later."* Full report, with every finding
+verified before acting on it: [`docs/first-run-check.md`](./docs/first-run-check.md).
+
+**What worked:** it understood the app in 5 seconds, got a workout in 2 taps, called
+the log form's errors the strongest part (messages beside each field, typed values
+kept, focus moved to the problem), and coming back worked ("Welcome back… last
+trained 6 days ago… last time 135 × 8 → try 135 × 9").
+
+**What it found, and what changed:**
+
+| Finding | Change |
+|---|---|
+| Saving an empty form put the error ~2,500px below where focus landed — on a phone, no visible explanation | Error now shows in the alert at the top, and focus moves to it |
+| "Last 115 × 10 → try 120 × 6" looked like a bug | Now says "(top of the range, so add weight)" |
+| After navigating, focus reset to the top; ~66 Tabs to reach Save; the focus ring faded in from white | Focus moves to the new page's heading; "Skip to Save session" link; focus ring appears instantly |
+| "Welcome back" right after the first log; "1 days" | "Nice work today"; correct plurals |
+| "What counts toward a streak?", "what if I train a different day?" | One line each on the Today screen |
+| Plan: label flipped, message below the button, rotation preview "didn't change" | Constant label, message above the button, the goal's rep scheme shown (the rotation really is the same for two goals) |
+
+**Checked and not a bug:** "Reset everything" does confirm. **Noted, not changed:**
+Progress is thin after one session; no data export or exercise swap (out of scope).
+
+This is an agent's feedback, not human testing — it couldn't test screen readers or
+real devices.
 
 ## Known limitations
 

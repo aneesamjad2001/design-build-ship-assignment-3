@@ -8,7 +8,7 @@ import { ConfirmDialog } from "./Modal";
 import { DaysPicker, GoalPicker, UnitPicker } from "./Pickers";
 import { LoadingState, NeedsProfile } from "./States";
 import { DAYS } from "@/lib/exercises";
-import { planFor } from "@/lib/plans";
+import { GOALS, planFor } from "@/lib/plans";
 import type { Goal } from "@/lib/plans";
 import type { Profile, Unit } from "@/lib/storage";
 import { resetAll, updateProfile, useIronlog } from "@/lib/store";
@@ -28,7 +28,6 @@ function PlanForm({ profile, sessionCount }: { profile: Profile; sessionCount: n
   const [saved, setSaved] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const changed = goal !== profile.goal || days !== profile.daysPerWeek || unit !== profile.unit;
   const split = planFor(goal, days);
 
   function save(e: React.FormEvent) {
@@ -86,15 +85,19 @@ function PlanForm({ profile, sessionCount }: { profile: Profile; sessionCount: n
             ))}
           </ol>
           <p className="mt-3 text-sm text-muted">
+            <span className="font-semibold text-ink">{GOALS.find((g) => g.id === goal)?.label}:</span>{" "}
+            {GOALS.find((g) => g.id === goal)?.detail}
+          </p>
+          <p className="mt-2 text-sm text-muted">
             Each visit recommends the day whose muscles have rested longest, so skipping a day never breaks the plan.
           </p>
         </section>
 
         <div className="flex flex-col gap-3">
-          <Button type="submit" variant="primary" className="w-full sm:w-auto sm:self-start">
-            {changed ? "Save changes" : "Save plan"}
-          </Button>
           {saved && <Banner tone="success" title={saved} />}
+          <Button type="submit" variant="primary" className="w-full sm:w-auto sm:self-start">
+            Save changes
+          </Button>
         </div>
       </form>
 

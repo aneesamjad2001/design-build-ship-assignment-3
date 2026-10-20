@@ -108,7 +108,7 @@ function LogForm({ profile, sessions, today }: { profile: Profile; sessions: Ses
       setErrors(result.errors);
       const keys = Object.keys(result.errors);
       const first = keys.includes("date") ? "date" : keys.includes("focus") ? "focus" : keys.find((k) => k !== "form");
-      pendingFocus.current = first ? idFor(first) : "ex0-set0-reps";
+      pendingFocus.current = first ? idFor(first) : "form-summary";
       return;
     }
     setSaving(true);
@@ -143,9 +143,27 @@ function LogForm({ profile, sessions, today }: { profile: Profile; sessions: Ses
       </div>
 
       <form onSubmit={submit} noValidate className="flex flex-col gap-6">
-        {errorCount > 0 && (
-          <div role="alert" className="border-l-4 border-danger bg-surface px-4 py-3 font-semibold">
-            {errorCount === 1 ? "1 thing needs fixing" : `${errorCount} things need fixing`} before this can be saved.
+        <a
+          href="#save-session"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById("save-session")?.focus();
+          }}
+          className="skip-link"
+        >
+          Skip to Save session
+        </a>
+
+        {(errorCount > 0 || errors.form) && (
+          <div
+            id="form-summary"
+            tabIndex={-1}
+            role="alert"
+            className="border-l-4 border-danger bg-surface px-4 py-3 font-semibold outline-none"
+          >
+            {errorCount > 0
+              ? `${errorCount === 1 ? "1 thing needs fixing" : `${errorCount} things need fixing`} before this can be saved.`
+              : errors.form}{" "}
             Everything you typed is still here.
           </div>
         )}
@@ -272,7 +290,7 @@ function LogForm({ profile, sessions, today }: { profile: Profile; sessions: Ses
 
         <div className="flex flex-col gap-3">
           {errors.form && <FieldError>{errors.form}</FieldError>}
-          <Button type="submit" variant="primary" disabled={saving} className="w-full sm:w-auto sm:self-start">
+          <Button id="save-session" type="submit" variant="primary" disabled={saving} className="w-full sm:w-auto sm:self-start">
             Save session
           </Button>
           <SafetyNote />

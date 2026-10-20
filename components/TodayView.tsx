@@ -7,6 +7,7 @@ import { DaysPicker, GoalPicker } from "./Pickers";
 import { LoadingState, SafetyNote } from "./States";
 import { WeekBar } from "./WeekBar";
 import { parseDate, relativeDay } from "@/lib/dates";
+import { focusPageHeading } from "@/lib/focus";
 import { DAYS } from "@/lib/exercises";
 import { DEFAULT_DAYS, goalLabel, planFor, repRange, workoutFor } from "@/lib/plans";
 import type { Goal } from "@/lib/plans";
@@ -50,6 +51,7 @@ function Onboarding() {
       return;
     }
     startProfile({ goal, daysPerWeek: days });
+    focusPageHeading();
   }
 
   const split = goal ? planFor(goal, days) : null;
@@ -161,7 +163,7 @@ function Today({
           {firstTime ? "Your first workout is ready" : dateLine}
         </p>
         <h1 className="mt-1 font-display text-5xl font-black uppercase leading-none tracking-wide sm:text-6xl">
-          {firstTime ? <>Let&apos;s get started</> : <>Welcome back</>}
+          {firstTime ? <>Let&apos;s get started</> : last?.date === today ? <>Nice work today</> : <>Welcome back</>}
         </h1>
         <p className="mt-2 text-lg text-muted">
           {last
@@ -237,9 +239,10 @@ function Today({
               <dd className="font-stencil text-4xl font-black leading-none">{total}</dd>
             </div>
           </dl>
-          {streak === 0 && (
-            <p className="mt-3 text-center text-sm text-muted">Hit {target} sessions in a week to start a streak.</p>
-          )}
+          <p className="mt-3 text-center text-sm text-muted">
+            A week counts when you train on {target} different days
+            {streak === 0 ? " — hit it to start a streak." : "."}
+          </p>
           <div className="mt-3 text-center">
             <ButtonLink href="/progress" variant="ghost">
               See my progress →
@@ -250,8 +253,8 @@ function Today({
 
       <footer className="flex flex-col gap-2">
         <p className="text-sm text-muted">
-          <span aria-hidden>● </span>Saved on this device. Your plan picks the workout; you can change your goal or days
-          anytime in Plan.
+          <span aria-hidden>● </span>Saved on this device. Train on a different day than planned? No problem — each
+          visit picks the workout whose muscles have rested longest. Change your goal or days anytime in Plan.
         </p>
         <SafetyNote />
       </footer>

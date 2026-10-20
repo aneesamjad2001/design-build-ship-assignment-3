@@ -145,9 +145,10 @@ export function suggestNext(
   }
 
   const w = (x: number | null) => (x && x > 0 ? `${fmtWeight(x)} ${unit} × ` : "");
+  const bumped = reps >= rx.repMax && !!weight && weight > 0;
   return {
     weight: nextWeight,
     reps: nextReps,
-    text: `Last: ${w(weight)}${reps} → try ${w(nextWeight)}${nextReps}`,
+    text: `Last: ${w(weight)}${reps} → try ${w(nextWeight)}${nextReps}${bumped ? " (top of the range, so add weight)" : ""}`,
   };
 }

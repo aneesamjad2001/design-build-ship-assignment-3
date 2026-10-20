@@ -25,6 +25,11 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
   await page.getByRole("button", { name: "Show my first workout" }).click();
   check((await text()).includes("Pick a goal so we can build your first workout."), "first visit: missing goal error not shown");
   check(await page.evaluate(() => document.activeElement?.getAttribute("name") === "goal"), "first visit: focus did not move to goal radios");
+  // focus ring appears at once (never fades in from white)
+  await page.locator('input[name="goal"]').first().focus();
+  await page.keyboard.press("ArrowDown");
+  check(await page.evaluate(() => getComputedStyle(document.activeElement.closest("label")).outlineColor === "rgb(255, 214, 10)"), "first visit: goal tile focus ring is not the instant accent color");
+  await page.keyboard.press("ArrowUp");
   // keyboard: arrow keys move the radio selection
   await page.locator('input[name="goal"]').first().focus();
   await page.keyboard.press("ArrowDown");
@@ -39,17 +44,29 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
   check(t.includes("Barbell bench press"), "first workout missing exercises");
   check(!t.includes("Days at the gym"), "first workout: stats card should be hidden before any session");
 
+  // after onboarding swaps to Today, focus lands on the new heading, at the top
+  await page.waitForTimeout(150);
+  check(await page.evaluate(() => document.activeElement?.tagName === "H1" && scrollY === 0), "onboarding: focus/scroll did not reset to the new heading");
+
   /* ---- persistence across reload ---- */
   await page.reload({ waitUntil: "networkidle" });
   check((await text()).includes("Log this workout"), "reload: profile not remembered");
   const stored = await page.evaluate(() => localStorage.getItem("ironlog:v1"));
   check(stored && JSON.parse(stored).profile?.goal === "muscle", "storage: profile not saved to localStorage");
 
+  /* ---- navigation moves focus to the new page's heading ---- */
+  await page.locator('nav[aria-label="Main"] a', { hasText: "Progress" }).click();
+  await page.waitForURL(BASE + "/progress");
+  await page.waitForTimeout(150);
+  check(await page.evaluate(() => document.activeElement?.tagName === "H1" && scrollY === 0), "navigation: focus did not move to the new page's heading");
+
   /* ---- THE FORM ---- */
   await page.goto(BASE + "/log", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Save session" }).click();
   check((await text()).includes("Enter the reps for at least one set"), "form: empty-save error missing");
-  check(await page.evaluate(() => document.activeElement?.id === "ex0-set0-reps"), "form: focus not on first reps field after empty save");
+  check(await page.evaluate(() => document.activeElement?.id === "form-summary"), "form: focus not on the error summary after an empty save");
+  check(await page.locator("#form-summary").isVisible(), "form: empty-save error summary not visible");
+  check(await page.evaluate(() => { const r = document.getElementById("form-summary").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }), "form: empty-save error is off-screen");
 
   const w = page.getByLabel("Barbell bench press, set 1, weight in lb");
   const r = page.getByLabel("Barbell bench press, set 1, reps");

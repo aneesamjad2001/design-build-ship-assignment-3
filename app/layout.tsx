@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Big_Shoulders } from "next/font/google";
+import { RouteFocus } from "@/components/RouteFocus";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <SiteHeader />
+        <RouteFocus />
         <main id="main" className="mx-auto w-full max-w-2xl px-4 pb-28 pt-6 md:pb-14">
           {children}
         </main>

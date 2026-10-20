@@ -7,7 +7,7 @@ import type { Unit } from "@/lib/storage";
 
 /** Tiles built on real radio inputs, so arrow keys and screen readers just work. */
 const tile =
-  "group relative flex cursor-pointer flex-col gap-1 border-2 border-field bg-surface p-4 transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-accent-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent";
+  "group relative flex cursor-pointer flex-col gap-1 border-2 border-field bg-surface p-4 transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-accent-ink has-[:focus-visible]:transition-none has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent";
 
 export function GoalPicker({
   value,

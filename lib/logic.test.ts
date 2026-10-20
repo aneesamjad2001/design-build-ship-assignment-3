@@ -140,6 +140,7 @@ describe("suggestNext", () => {
   it("adds weight at the top of the range", () => {
     const s = suggestNext(bench, rx, [sess("2026-10-12", "push", "bench-press", 135, 10)], "lb")!;
     assert.deepEqual([s.weight, s.reps], [140, 6]);
+    assert.match(s.text, /top of the range, so add weight/);
   });
   it("uses smaller steps in kilograms", () => {
     const s = suggestNext(bench, rx, [sess("2026-10-12", "push", "bench-press", 60, 10)], "kg")!;

@@ -50,6 +50,14 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  /* focus must show instantly — never fade a ring in */
+  transition: none;
+}
+
+/* Page headings receive focus when the view changes so keyboard and screen
+   reader users know something new is here; they aren't controls, so no ring. */
+main h1:focus {
+  outline: none;
 }
 
 /* Caution-tape rule: decorative texture in neutral grays (yellow stays
